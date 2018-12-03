@@ -1,6 +1,6 @@
 # goATS
-[![Build Status](https://api.travis-ci.org/kjx98/go-ats.svg?branch=master)](
-https://api.travis-ci.org/kjx98/go-ats)
+[![Build Status](https://travis-ci.org/kjx98/go-ats.svg?branch=master)](
+https://travis-ci.org/kjx98/go-ats)
 
 open Algorithm Trading Platform using golang
 
