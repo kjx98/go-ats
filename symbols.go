@@ -72,9 +72,9 @@ func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	volMin := float64(s.VolMin)
 	volMax := float64(s.VolMax)
 	if vd := s.VolDigits; vd > 0 {
-		volStep *= dMulti[vd]
-		volMin *= dMulti[vd]
-		volMax *= dMulti[vd]
+		volStep *= digitMulti(vd)
+		volMin *= digitMulti(vd)
+		volMax *= digitMulti(vd)
 	}
 	res = math.Floor(res/volStep) * volStep
 	if res < volMin {
@@ -94,8 +94,23 @@ type symbolTemplate struct {
 	USticker     bool `yaml:"usTicker,omitempty"`
 }
 
-var dMulti = []float64{1.0, 0.1, 0.01, 0.001, 0.0001,
-	0.00001, 0.000001, 0.0000001, 0.00000001,
+var fDiv = [...]float64{100.0, 10.0, 1.0, 0.1, 0.01, 0.001, 0.0001,
+	0.00001, 0.000001}
+var fMulti = [...]float64{0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0,
+	100000.0, 1000000.0}
+
+func digitMulti(ndigit int) float64 {
+	if ndigit < -2 || ndigit > 6 {
+		return 1.0
+	}
+	return fMulti[ndigit+2]
+}
+
+func digitDiv(ndigit int) float64 {
+	if ndigit < -2 || ndigit > 6 {
+		return 1.0
+	}
+	return fDiv[ndigit+2]
 }
 
 func (t symbolTemplate) String() (res string) {
@@ -104,7 +119,7 @@ func (t symbolTemplate) String() (res string) {
 		margin = fmt.Sprintf("%f", t.Base.Margin)
 	}
 	if vd := t.Base.VolDigits; vd > 0 {
-		mm := dMulti[vd]
+		mm := digitMulti(vd)
 		volMin := float64(t.Base.VolMin) * mm
 		volMax := float64(t.Base.VolMax) * mm
 		volStep := float64(t.Base.VolStep) * mm
@@ -287,8 +302,11 @@ func initSymbols() {
 		if initTemp[i].Base.PriceStep == 0 {
 			initTemp[i].Base.PriceStep = 1
 		}
-		if initTemp[i].Base.VolDigits > len(dMulti)-1 {
-			initTemp[i].Base.VolDigits = len(dMulti) - 1
+		if initTemp[i].Base.VolDigits > len(fMulti)-3 {
+			initTemp[i].Base.VolDigits = len(fMulti) - 3
+		}
+		if initTemp[i].Base.PriceDigits > len(fMulti)-3 {
+			initTemp[i].Base.PriceDigits = len(fMulti) - 3
 		}
 	}
 }

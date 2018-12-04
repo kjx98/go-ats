@@ -19,7 +19,7 @@ func (s *SymbolInfo) GetQuotes() Quotes {
 	return s.Quotes
 }
 
-func UpdateQuotes(sym string, qq *Quotes) {
+func updateQuotes(sym string, qq *Quotes) {
 	if si, err := GetSymbolInfo(sym); err != nil {
 		return
 	} else {
@@ -27,12 +27,12 @@ func UpdateQuotes(sym string, qq *Quotes) {
 	}
 }
 
-func UpdateLastSales(sym string, last float64, vol float64) {
+func updateLastSales(sym string, last float64, vol float64) {
 	if si, err := GetSymbolInfo(sym); err != nil {
 		return
 	} else {
 		if si.VolDigits > 0 {
-			vol /= dMulti[si.VolDigits]
+			vol *= digitDiv(si.VolDigits)
 		}
 		nVol := int64(vol)
 		if nVol < si.Volume {
