@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Bar interface {
+type BarInf interface {
 	Date() time.Time
 	Open() int32
 	High() int32
@@ -14,11 +14,21 @@ type Bar interface {
 	Volume() int64
 }
 
-type BarExt interface {
-	Bar
+type BarExtInf interface {
+	BarInf
 	Turnover() float32
 	OpenInterest() int32
 }
+
+type Bars struct {
+	Date	[]time.Time
+	Open	[]float64
+	High	[]float64
+	Low		[]float64
+	Close	[]float64
+	Volume	[]float64
+}
+
 
 type dayBar struct {
 	date     julian.JulianDay
