@@ -1,8 +1,8 @@
 package ats
 
 import (
+	"github.com/kjx98/golib/julian"
 )
-
 
 type Tick struct {
 	Time   timeT32
@@ -38,4 +38,14 @@ type MinTAExt struct {
 	Avg      int32
 	Turnover float32
 	OpenInt  uint32
+}
+
+type DayTA struct {
+	Date     julian.JulianDay
+	Open     int32
+	High     int32
+	Low      int32
+	Close    int32
+	Turnover float32
+	Volume   int64
 }
