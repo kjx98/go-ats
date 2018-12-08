@@ -2,11 +2,15 @@ package ats
 
 import (
 	"testing"
+	"math"
 )
 
 func TestInitSymbols(t *testing.T) {
 	initSymbols()
-	t.Log("initTemp:", initTemp)
+	t.Log("initTemp:")
+	for i := 0; i < len(initTemp); i++ {
+		t.Log(&initTemp[i])
+	}
 }
 
 func TestSymbolsFunc(t *testing.T) {
@@ -17,6 +21,13 @@ func TestSymbolsFunc(t *testing.T) {
 	newSymbolInfo("ESY8")
 	newSymbolInfo("GOOG")
 	newSymbolInfo("SPY")
+	newSymbolInfo("EURUSD")
+	newSymbolInfo("USDJPY")
+	newSymbolInfo("BTCUSD")
+	t.Log("symInfos:")
+	for _, symP := range symInfos {
+		t.Log(symP)
+	}
 	if si, err := GetSymbolInfo("ESY8"); err == nil {
 		t.Errorf("ESY8 shouldn't exist, %v", si)
 	}
@@ -25,6 +36,15 @@ func TestSymbolsFunc(t *testing.T) {
 	} else if np := si.PriceNormal(2810.2534); np != 2810.25 {
 		t.Errorf("%s NormalPrice 2810.2534 to %f", si.Ticker, np)
 	} else if vv := si.CalcVolume(422000, 2810.25); vv != 60.0 {
+		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
+	} else {
+		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())
+	}
+	if si, err := GetSymbolInfo("BTCUSD"); err != nil {
+		t.Error("not found BTCUSD", err)
+	} else if np := si.PriceNormal(32810.2734)-32810.27; math.Abs(np*1e8) > 0.01 {
+		t.Errorf("%s NormalPrice 32810.2734 to 32810.27, diff(%f)", si.Ticker, np)
+	} else if vv := si.CalcVolume(422000, 32810.27); vv != 12.8618 {
 		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
 	} else {
 		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())

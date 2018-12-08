@@ -5,6 +5,8 @@ import (
 )
 
 type Bars struct {
+	sym    string // symbol name
+	period int    // time period in second
 	Date   []timeT64
 	Open   []float64
 	High   []float64

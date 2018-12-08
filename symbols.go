@@ -77,9 +77,10 @@ func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	volMin := float64(s.VolMin)
 	volMax := float64(s.VolMax)
 	if vd := s.VolDigits; vd > 0 {
-		volStep *= digitMulti(vd)
-		volMin *= digitMulti(vd)
-		volMax *= digitMulti(vd)
+		mm := digitDiv(vd)
+		volStep *= mm
+		volMin *= mm
+		volMax *= mm
 	}
 	res = math.Floor(res/volStep) * volStep
 	if res < volMin {
@@ -88,6 +89,27 @@ func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 		res = volMax
 	}
 	return res
+}
+
+func (s *SymbolInfo) String() (res string) {
+	margin := ""
+	if s.bMargin {
+		margin = fmt.Sprintf("margin(%.2f)", s.Margin)
+	}
+	if vd := s.VolDigits; vd > 0 {
+		mm := digitDiv(vd)
+		volMin := float64(s.VolMin) * mm
+		volMax := float64(s.VolMax) * mm
+		volStep := float64(s.VolStep) * mm
+		res = fmt.Sprintf("%s@%s fKey(%d) Vol(%.*f/%.*f)(%.*f) PrcStep(%.*f) %s forex(%v)",
+			s.Ticker, s.Market, s.fKey, vd, volMin, vd, volMax, vd, volStep,
+			s.PriceDigits, s.PriceStep, margin, s.IsForex)
+	} else {
+		res = fmt.Sprintf("%s@%s fkey(%d) Vol(%d/%d)(%d) PrcStep(%.*f) %s forex(%v)",
+			s.Ticker, s.Market, s.fKey, s.VolMin, s.VolMax, s.VolStep,
+			s.PriceDigits, s.PriceStep, margin, s.IsForex)
+	}
+	return
 }
 
 type symbolTemplate struct {
@@ -118,22 +140,21 @@ func digitDiv(ndigit int) float64 {
 	return fDiv[ndigit+2]
 }
 
-func (t symbolTemplate) String() (res string) {
+func (t *symbolTemplate) String() (res string) {
 	margin := ""
-	if t.Base.Margin > 0 {
+	if t.Base.bMargin {
 		margin = fmt.Sprintf("%f", t.Base.Margin)
 	}
 	if vd := t.Base.VolDigits; vd > 0 {
-		mm := digitMulti(vd)
+		mm := digitDiv(vd)
 		volMin := float64(t.Base.VolMin) * mm
 		volMax := float64(t.Base.VolMax) * mm
 		volStep := float64(t.Base.VolStep) * mm
-		res = fmt.Sprintf("%s@%s Vol(%.*f/%.*f)(%.*f) PrcStep(%.*f) %s %d %d,\n",
-			t.TickerPrefix, t.Base.Market, vd, volMin, vd, volMax,
-			vd, volStep, t.Base.PriceDigits, t.Base.PriceStep,
-			margin, t.TickerLen, t.DateLen)
+		res = fmt.Sprintf("%s@%s Vol(%.*f/%.*f)(%.*f) PrcStep(%.*f) %s %d %d",
+			t.TickerPrefix, t.Base.Market, vd, volMin, vd, volMax, vd, volStep,
+			t.Base.PriceDigits, t.Base.PriceStep, margin, t.TickerLen, t.DateLen)
 	} else {
-		res = fmt.Sprintf("%s@%s Vol(%d/%d)(%d) PrcStep(%.*f) %s %d %d,\n",
+		res = fmt.Sprintf("%s@%s Vol(%d/%d)(%d) PrcStep(%.*f) %s %d %d",
 			t.TickerPrefix, t.Base.Market, t.Base.VolMin, t.Base.VolMax,
 			t.Base.VolStep, t.Base.PriceDigits, t.Base.PriceStep,
 			margin, t.TickerLen, t.DateLen)
@@ -147,6 +168,7 @@ func (data symbolTemps) Len() int {
 	return len(data)
 }
 
+// prefer longer match
 func (data symbolTemps) Less(i, j int) bool {
 	return len(data[i].TickerPrefix) > len(data[j].TickerPrefix)
 }
@@ -220,6 +242,8 @@ func GetSymbolInfo(sym string) (SymbolInfo, error) {
 	return SymbolInfo{}, errors.New("no such symbol")
 }
 
+var nInstruments int
+
 func newSymbolInfo(sym string) {
 	sLen := len(sym)
 	if sLen == 0 {
@@ -282,6 +306,12 @@ func newSymbolInfo(sym string) {
 		}
 		symInfo.Ticker = sym
 		symInfo.symbolBase = &initTemp[i].Base
+		if symInfo.IsForex && sym[3:] == "JPY" {
+			symInfo.PriceDigits = 3
+			symInfo.PriceStep = 0.001
+		}
+		nInstruments++
+		symInfo.fKey = nInstruments
 		symInfos[sym] = &symInfo
 		return
 	}

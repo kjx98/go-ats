@@ -115,6 +115,115 @@ ES:
     dateLen: 2
     usTicker: true
 
+EUR:
+    ticker: EUR
+    name: EURO Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000
+        volumeStep: 1
+        priceStep: 0.00001
+        digits: 5
+        volumeDigits: 2
+        lotSize: 100
+        margin: 0.02
+    tickerLen: 6
+    forex: true
+
+USD:
+    ticker: USD
+    name: USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000
+        volumeStep: 1
+        priceStep: 0.00001
+        digits: 5
+        volumeDigits: 2
+        lotSize: 100
+        margin: 0.02
+    tickerLen: 6
+    forex: true
+
+GBP:
+    ticker: GBP
+    name: GB pound Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000
+        volumeStep: 1
+        priceStep: 0.00001
+        digits: 5
+        volumeDigits: 2
+        lotSize: 100
+        margin: 0.02
+    tickerLen: 6
+    forex: true
+
+XAU:
+    ticker: XAU
+    name: Gold /USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000
+        volumeStep: 1
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 2
+        lotSize: 100
+        margin: 0.02
+    tickerLen: 6
+    forex: true
+
+BTC:
+    ticker: BTC
+    name: BitCoin /USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000000
+        volumeStep: 1
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 4
+        margin: 1.0
+    tickerLen: 6
+    forex: true
+
+ETH:
+    ticker: ETH
+    name: Ethereum /USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000000
+        volumeStep: 1
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 4
+        margin: 1.0
+    tickerLen: 6
+    forex: true
+
+EOS:
+    ticker: EOS
+    name: EOS /USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000000
+        volumeStep: 1
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 4
+        margin: 1.0
+    tickerLen: 6
+    forex: true
+
 default:
     ticker:
     name: equity and fund of US market
@@ -127,5 +236,4 @@ default:
         digits: 2
         volumeDigits: 0
     tickerLen: 5
-    dateLen: 0
     usTicker: true
