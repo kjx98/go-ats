@@ -15,6 +15,8 @@ func TestSymbolsFunc(t *testing.T) {
 	newSymbolInfo("cu1903")
 	newSymbolInfo("ESZ8")
 	newSymbolInfo("ESY8")
+	newSymbolInfo("GOOG")
+	newSymbolInfo("SPY")
 	if si, err := GetSymbolInfo("ESY8"); err == nil {
 		t.Errorf("ESY8 shouldn't exist, %v", si)
 	}
@@ -23,6 +25,24 @@ func TestSymbolsFunc(t *testing.T) {
 	} else if np := si.PriceNormal(2810.2534); np != 2810.25 {
 		t.Errorf("%s NormalPrice 2810.2534 to %f", si.Ticker, np)
 	} else if vv := si.CalcVolume(422000, 2810.25); vv != 60.0 {
+		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
+	} else {
+		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())
+	}
+	if si, err := GetSymbolInfo("GOOG"); err != nil {
+		t.Error("not found GOOG", err)
+	} else if np := si.PriceNormal(2810.1234); np != 2810.12 {
+		t.Errorf("%s NormalPrice 2810.1234 to %f", si.Ticker, np)
+	} else if vv := si.CalcVolume(422000, 2810.25); vv != 150.0 {
+		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
+	} else {
+		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())
+	}
+	if si, err := GetSymbolInfo("SPY"); err != nil {
+		t.Error("not found SPY", err)
+	} else if np := si.PriceNormal(263.0123); np != 263.01 {
+		t.Errorf("%s NormalPrice 263.0123 to %f", si.Ticker, np)
+	} else if vv := si.CalcVolume(31825, 263.01); vv != 121.0 {
 		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
 	} else {
 		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())

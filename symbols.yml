@@ -114,3 +114,18 @@ ES:
     tickerLen: 4
     dateLen: 2
     usTicker: true
+
+default:
+    ticker:
+    name: equity and fund of US market
+    base:
+        market: US
+        volumeMin: 1
+        volumeMax: 1000000
+        volumeStep: 1
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 0
+    tickerLen: 5
+    dateLen: 0
+    usTicker: true

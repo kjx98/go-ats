@@ -20,6 +20,7 @@ import (
 // PriceDigits
 // VolDigits
 // Margin	suppose initial margin and maintain margin are same, no support for options
+// IsForex	Forex/CFD ... OTC instrument without last/sales
 type symbolBase struct {
 	Market      string  `yaml:"market,omitempty"`
 	VolMin      int     `yaml:"volumeMin"`
@@ -30,13 +31,17 @@ type symbolBase struct {
 	VolDigits   int     `yaml:"volumeDigits,omitempty"`
 	LotSize     int     `yaml:"lotSize,omitempty"`
 	Margin      float64 `yaml:"margin,omitempty"`
+	IsForex     bool    `yaml:"forex,omitempty"`
 	bMargin     bool
 }
 
+// SymbolInfo symbol traits of instrument
+// fKey link Bars/DayTA/MinTA etc, index from 1 .. count
 type SymbolInfo struct {
 	Ticker string
 	*symbolBase
 	deliverMonth int
+	fKey         int
 	Upper        float64
 	Lower        float64
 	Quotes
@@ -143,7 +148,7 @@ func (data symbolTemps) Len() int {
 }
 
 func (data symbolTemps) Less(i, j int) bool {
-	return len(data[i].TickerPrefix) < len(data[j].TickerPrefix)
+	return len(data[i].TickerPrefix) > len(data[j].TickerPrefix)
 }
 
 func (data symbolTemps) Swap(i, j int) {
@@ -225,10 +230,14 @@ func newSymbolInfo(sym string) {
 	}
 	var symInfo = SymbolInfo{}
 	for i := 0; i < len(initTemp); i++ {
-		if initTemp[i].TickerLen != sLen {
-			continue
-		}
-		if sym[:len(initTemp[i].TickerPrefix)] != initTemp[i].TickerPrefix {
+		if len(initTemp[i].TickerPrefix) > 0 {
+			if initTemp[i].TickerLen != sLen {
+				continue
+			}
+			if sym[:len(initTemp[i].TickerPrefix)] != initTemp[i].TickerPrefix {
+				continue
+			}
+		} else if sLen > initTemp[i].TickerLen {
 			continue
 		}
 		switch initTemp[i].DateLen {
@@ -241,7 +250,7 @@ func newSymbolInfo(sym string) {
 			}
 			if mon := strings.IndexByte(usDeliverMonth, sym[sLen-2]); mon < 0 {
 				// deliver Month no exist
-				continue
+				return
 			} else {
 				symInfo.deliverMonth = mon
 			}
@@ -252,7 +261,7 @@ func newSymbolInfo(sym string) {
 			if res, err := strconv.Atoi(sym[sLen-2:]); err != nil {
 				continue
 			} else if res < 1 || res > 12 {
-				continue
+				return
 			} else {
 				symInfo.deliverMonth = res
 			}
@@ -263,7 +272,7 @@ func newSymbolInfo(sym string) {
 			if res, err := strconv.Atoi(sym[sLen-2:]); err != nil {
 				continue
 			} else if res < 1 || res > 12 {
-				continue
+				return
 			} else {
 				symInfo.deliverMonth = res
 			}
