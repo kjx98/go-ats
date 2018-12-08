@@ -116,7 +116,7 @@ ES:
     usTicker: true
 
 EUR:
-    ticker: EUR
+    ticker: 'EUR[A-Z]{3}'
     name: EURO Forex
     base:
         market: FX
@@ -128,11 +128,12 @@ EUR:
         volumeDigits: 2
         lotSize: 100
         margin: 0.02
+        forex: true
     tickerLen: 6
-    forex: true
+    regexp: true
 
 USD:
-    ticker: USD
+    ticker: '[A-Z]{3}USD|USD[A-Z]{3}'
     name: USD Forex
     base:
         market: FX
@@ -144,8 +145,9 @@ USD:
         volumeDigits: 2
         lotSize: 100
         margin: 0.02
+        forex: true
     tickerLen: 6
-    forex: true
+    regexp: true
 
 GBP:
     ticker: GBP
@@ -160,8 +162,8 @@ GBP:
         volumeDigits: 2
         lotSize: 100
         margin: 0.02
+        forex: true
     tickerLen: 6
-    forex: true
 
 XAU:
     ticker: XAU
@@ -176,8 +178,8 @@ XAU:
         volumeDigits: 2
         lotSize: 100
         margin: 0.02
+        forex: true
     tickerLen: 6
-    forex: true
 
 BTC:
     ticker: BTC
@@ -191,8 +193,8 @@ BTC:
         digits: 2
         volumeDigits: 4
         margin: 1.0
+        forex: true
     tickerLen: 6
-    forex: true
 
 ETH:
     ticker: ETH
@@ -206,8 +208,8 @@ ETH:
         digits: 2
         volumeDigits: 4
         margin: 1.0
+        forex: true
     tickerLen: 6
-    forex: true
 
 EOS:
     ticker: EOS
@@ -221,11 +223,12 @@ EOS:
         digits: 2
         volumeDigits: 4
         margin: 1.0
+        forex: true
     tickerLen: 6
-    forex: true
 
-default:
-    ticker:
+
+us-equity:
+    ticker: '[A-Z]{1,5}'
     name: equity and fund of US market
     base:
         market: US
@@ -237,3 +240,4 @@ default:
         volumeDigits: 0
     tickerLen: 5
     usTicker: true
+    regexp: true

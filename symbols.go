@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v2"
 )
@@ -119,6 +121,8 @@ type symbolTemplate struct {
 	TickerLen    int  `yaml:"tickerLen,omitempty"`
 	DateLen      int  `yaml:"dateLen,omitempty"`
 	USticker     bool `yaml:"usTicker,omitempty"`
+	Bregexp      bool `yaml:"regexp,omitempty"`
+	exp          *regexp.Regexp
 }
 
 var fDiv = [...]float64{100.0, 10.0, 1.0, 0.1, 0.01, 0.001, 0.0001,
@@ -145,6 +149,9 @@ func (t *symbolTemplate) String() (res string) {
 	if t.Base.bMargin {
 		margin = fmt.Sprintf("%f", t.Base.Margin)
 	}
+	if t.Bregexp {
+		margin += " regexp"
+	}
 	if vd := t.Base.VolDigits; vd > 0 {
 		mm := digitDiv(vd)
 		volMin := float64(t.Base.VolMin) * mm
@@ -170,7 +177,15 @@ func (data symbolTemps) Len() int {
 
 // prefer longer match
 func (data symbolTemps) Less(i, j int) bool {
-	return len(data[i].TickerPrefix) > len(data[j].TickerPrefix)
+	if data[i].Bregexp && data[j].Bregexp {
+		return len(data[i].TickerPrefix) > len(data[j].TickerPrefix)
+	} else if !data[i].Bregexp && !data[j].Bregexp {
+		return len(data[i].TickerPrefix) > len(data[j].TickerPrefix)
+	} else if data[i].Bregexp {
+		return false
+	}
+	return true
+
 }
 
 func (data symbolTemps) Swap(i, j int) {
@@ -243,26 +258,38 @@ func GetSymbolInfo(sym string) (SymbolInfo, error) {
 }
 
 var nInstruments int
+var instRWlock sync.RWMutex
 
 func newSymbolInfo(sym string) {
 	sLen := len(sym)
 	if sLen == 0 {
 		return
 	}
+	instRWlock.RLock()
 	if _, ok := symInfos[sym]; ok {
+		instRWlock.RUnlock()
 		return
 	}
+	instRWlock.RUnlock()
 	var symInfo = SymbolInfo{}
 	for i := 0; i < len(initTemp); i++ {
-		if len(initTemp[i].TickerPrefix) > 0 {
+		if sLen > initTemp[i].TickerLen {
+			continue
+		}
+		if initTemp[i].Bregexp {
+			if initTemp[i].exp == nil {
+				continue
+			}
+			if sm := initTemp[i].exp.FindString(sym); sm == "" {
+				continue
+			}
+		} else if len(initTemp[i].TickerPrefix) > 0 {
 			if initTemp[i].TickerLen != sLen {
 				continue
 			}
 			if sym[:len(initTemp[i].TickerPrefix)] != initTemp[i].TickerPrefix {
 				continue
 			}
-		} else if sLen > initTemp[i].TickerLen {
-			continue
 		}
 		switch initTemp[i].DateLen {
 		case 2:
@@ -310,6 +337,8 @@ func newSymbolInfo(sym string) {
 			symInfo.PriceDigits = 3
 			symInfo.PriceStep = 0.001
 		}
+		instRWlock.Lock()
+		defer instRWlock.Unlock()
 		nInstruments++
 		symInfo.fKey = nInstruments
 		symInfos[sym] = &symInfo
@@ -317,35 +346,48 @@ func newSymbolInfo(sym string) {
 	}
 }
 
+var symbolOnce sync.Once
+
 func initSymbols() {
-	if bb, err := ioutil.ReadFile("symbols.yml"); err == nil {
-		var symTemps map[string]symbolTemplate
-		if yaml.Unmarshal(bb, &symTemps) == nil {
-			initTemp = []symbolTemplate{}
-			for _, ss := range symTemps {
-				initTemp = append(initTemp, ss)
+	symbolOnce.Do(func() {
+		if bb, err := ioutil.ReadFile("symbols.yml"); err == nil {
+			var symTemps map[string]symbolTemplate
+			if yaml.Unmarshal(bb, &symTemps) == nil {
+				initTemp = []symbolTemplate{}
+				for _, ss := range symTemps {
+					if ss.Bregexp {
+						if ss.exp, err = regexp.Compile(ss.TickerPrefix); err != nil {
+							continue
+						}
+					}
+					initTemp = append(initTemp, ss)
+				}
 			}
 		}
-	}
-	sort.Sort(initTemp)
-	// verify initTemp
-	for i := 0; i < len(initTemp); i++ {
-		if initTemp[i].Base.Margin <= 0 || initTemp[i].Base.Margin == 1.0 {
-			initTemp[i].Base.bMargin = false
-		} else {
-			initTemp[i].Base.bMargin = true
+		sort.Sort(initTemp)
+		// verify initTemp
+		for i := 0; i < len(initTemp); i++ {
+			if initTemp[i].Base.Margin <= 0 || initTemp[i].Base.Margin == 1.0 {
+				initTemp[i].Base.bMargin = false
+			} else {
+				initTemp[i].Base.bMargin = true
+			}
+			if initTemp[i].Base.VolStep == 0 {
+				initTemp[i].Base.VolStep = 1
+			}
+			if initTemp[i].Base.PriceStep == 0 {
+				initTemp[i].Base.PriceStep = 1
+			}
+			if initTemp[i].Base.VolDigits > len(fMulti)-3 {
+				initTemp[i].Base.VolDigits = len(fMulti) - 3
+			}
+			if initTemp[i].Base.PriceDigits > len(fMulti)-3 {
+				initTemp[i].Base.PriceDigits = len(fMulti) - 3
+			}
 		}
-		if initTemp[i].Base.VolStep == 0 {
-			initTemp[i].Base.VolStep = 1
-		}
-		if initTemp[i].Base.PriceStep == 0 {
-			initTemp[i].Base.PriceStep = 1
-		}
-		if initTemp[i].Base.VolDigits > len(fMulti)-3 {
-			initTemp[i].Base.VolDigits = len(fMulti) - 3
-		}
-		if initTemp[i].Base.PriceDigits > len(fMulti)-3 {
-			initTemp[i].Base.PriceDigits = len(fMulti) - 3
-		}
-	}
+	})
+}
+
+func init() {
+	initSymbols()
 }

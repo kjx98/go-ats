@@ -1,8 +1,8 @@
 package ats
 
 import (
-	"testing"
 	"math"
+	"testing"
 )
 
 func TestInitSymbols(t *testing.T) {
@@ -22,6 +22,7 @@ func TestSymbolsFunc(t *testing.T) {
 	newSymbolInfo("GOOG")
 	newSymbolInfo("SPY")
 	newSymbolInfo("EURUSD")
+	newSymbolInfo("EURJPY")
 	newSymbolInfo("USDJPY")
 	newSymbolInfo("BTCUSD")
 	t.Log("symInfos:")
@@ -42,7 +43,7 @@ func TestSymbolsFunc(t *testing.T) {
 	}
 	if si, err := GetSymbolInfo("BTCUSD"); err != nil {
 		t.Error("not found BTCUSD", err)
-	} else if np := si.PriceNormal(32810.2734)-32810.27; math.Abs(np*1e8) > 0.01 {
+	} else if np := si.PriceNormal(32810.2734) - 32810.27; math.Abs(np*1e8) > 0.01 {
 		t.Errorf("%s NormalPrice 32810.2734 to 32810.27, diff(%f)", si.Ticker, np)
 	} else if vv := si.CalcVolume(422000, 32810.27); vv != 12.8618 {
 		t.Errorf("%s CalcVolume: %f", si.Ticker, vv)
