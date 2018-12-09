@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	MaxInstruments	int=4096
+	MaxInstruments int = 4096
 )
-
 
 // Market  Exchange/combo national markets
 // VolMin  minimal volume of order
@@ -51,13 +50,12 @@ type SymbolInfo struct {
 	fKey         int
 	Upper        float64
 	Lower        float64
-	quote	*Quotes
+	quote        Quotes
 }
 
 func (s *SymbolInfo) FastKey() int {
 	return s.fKey
 }
-
 
 func (s *SymbolInfo) Digits() int {
 	return s.PriceDigits
@@ -281,7 +279,9 @@ func newSymbolInfo(sym string) {
 		return
 	}
 	// maxium instruments reach, no more instrument add
-	if nInstruments == MaxInstruments { return }
+	if nInstruments == MaxInstruments {
+		return
+	}
 	instRWlock.RUnlock()
 	var symInfo = SymbolInfo{}
 	for i := 0; i < len(initTemp); i++ {

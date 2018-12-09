@@ -6,7 +6,7 @@ import (
 )
 
 // seconds for Bar time interval
-type Period int64
+type Period int32
 
 const (
 	// Min1 - 1 Minute time period
@@ -37,7 +37,7 @@ const (
 
 // Bars struct for talib
 type Bars struct {
-	symKey  int // fastKey of symbol name
+	symKey int32  // fastKey of symbol name
 	period Period // time period in second
 	Date   []timeT64
 	Open   []float64
@@ -49,8 +49,8 @@ type Bars struct {
 
 // unimplemented yet
 type BarCache struct {
-	loadTime	timeT64
-	lastAccess	timeT64
+	loadTime   timeT64
+	lastAccess timeT64
 	basePeriod Period
 	Bars
 }
@@ -60,10 +60,10 @@ var invalidSymbol = errors.New("Symbol not exist")
 var noCacheBase = errors.New("No cache base Bars")
 
 // cache for Min1/Min5 Base period Bars
-var	MinBarsBase []*Bars
-// cache for Daily Base period Bars
-var	DayBarsBase	[]*Bars
+var MinBarsBase []*Bars
 
+// cache for Daily Base period Bars
+var DayBarsBase []*Bars
 
 // using int for BarCacheHash
 func getBarCacheHash(fKey int, period Period) int {
@@ -75,58 +75,80 @@ func getBarCacheHash(fKey int, period Period) int {
 //	Daily for daily/weekly/monthly
 func (b *Bars) LoadBars(sym string, period Period) error {
 	si, err := GetSymbolInfo(sym)
-	if err != nil || si.fKey <= 0 { return invalidSymbol }
+	if err != nil || si.fKey <= 0 {
+		return invalidSymbol
+	}
 	switch period {
-	case Min1: fallthrough
+	case Min1:
+		fallthrough
 	case Min5:
 		if cnt := len(MinBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
-			if cnt > 0 { copy(nb, MinBarsBase) }
+			if cnt > 0 {
+				copy(nb, MinBarsBase)
+			}
 			MinBarsBase = nb
 		}
-		MinBarsBase[si.fKey -1] = b
+		b.symKey = int32(si.fKey)
+		b.period = period
+		MinBarsBase[si.fKey-1] = b
 	case Daily:
 		if cnt := len(DayBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
-			if cnt > 0 { copy(nb, DayBarsBase) }
+			if cnt > 0 {
+				copy(nb, DayBarsBase)
+			}
 			DayBarsBase = nb
 		}
-		DayBarsBase[si.fKey -1] = b
+		b.symKey = int32(si.fKey)
+		b.period = period
+		DayBarsBase[si.fKey-1] = b
 	default:
 		return invalidPeriod
 	}
 	return nil
 }
 
-
 // Get Bars for symbol with period
 func GetBars(sym string, period Period) (res *Bars, err error) {
-
 	si, err := GetSymbolInfo(sym)
-	if si.fKey <= 0 { return nil, invalidSymbol }
+	if si.fKey <= 0 {
+		return nil, invalidSymbol
+	}
 	res, err = GetBarsByKey(si.fKey, period)
 	return
 }
 
 // Get Bars by fastKey of symbol with period
 func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
-	var basePeriod	Period
-	if err != nil { return }
+	var basePeriod Period
+	if err != nil {
+		return
+	}
 	switch period {
-	case Min1: fallthrough
+	case Min1:
+		fallthrough
 	case Min3:
 		basePeriod = Min1
-	case Min5: fallthrough
-	case Min15: fallthrough
-	case Min30: fallthrough
-	case Hour1: fallthrough
-	case Hour2: fallthrough
-	case Hour4: fallthrough
+	case Min5:
+		fallthrough
+	case Min15:
+		fallthrough
+	case Min30:
+		fallthrough
+	case Hour1:
+		fallthrough
+	case Hour2:
+		fallthrough
+	case Hour4:
+		fallthrough
 	case Hour8:
 		// try Min1 first
 		basePeriod = Min1
-	case Daily: fallthrough
-	case Weekly: fallthrough
+	case Daily:
+		fallthrough
+	case Weekly:
+		fallthrough
 	case Monthly:
 		basePeriod = Daily
 	default:
@@ -135,18 +157,29 @@ func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
 
 	var baseBars *Bars
 	switch basePeriod {
-	case Min5: fallthrough
+	case Min5:
+		fallthrough
 	case Min1:
-		if fKey > len(MinBarsBase) { return nil, noCacheBase }
-		baseBars = MinBarsBase[fKey -1]
-		if baseBars == nil || period < baseBars.period  { return nil, noCacheBase }
+		if fKey > len(MinBarsBase) {
+			return nil, noCacheBase
+		}
+		baseBars = MinBarsBase[fKey-1]
+		if baseBars == nil || period < baseBars.period {
+			return nil, noCacheBase
+		}
 		basePeriod = baseBars.period
 	case Daily:
-		if fKey > len(DayBarsBase)  { return nil, noCacheBase }
-		baseBars = DayBarsBase[fKey -1]
-		if baseBars == nil { return nil, noCacheBase }
+		if fKey > len(DayBarsBase) {
+			return nil, noCacheBase
+		}
+		baseBars = DayBarsBase[fKey-1]
+		if baseBars == nil {
+			return nil, noCacheBase
+		}
 	}
-	if period == baseBars.period { return baseBars, nil }
+	if period == baseBars.period {
+		return baseBars, nil
+	}
 	return baseBars.reSample(period)
 }
 

@@ -15,18 +15,20 @@ type Quotes struct {
 	AskVol    int64
 }
 
+// return quotes for symbol
 func (s *SymbolInfo) GetQuotes() Quotes {
-	return *s.quote
+	return s.quote
 }
 
-func updateQuotes(sym string, qq *Quotes) {
-	if si, err := GetSymbolInfo(sym); err != nil {
-		return
-	} else {
-		si.quote = qq
+// return ref for quotes of symbol, used by broker quotes feed
+func getQuotesPtr(sym string) (qq *Quotes) {
+	if si, err := GetSymbolInfo(sym); err == nil {
+		qq = &si.quote
 	}
+	return
 }
 
+/*
 func updateLastSales(sym string, last float64, vol float64) {
 	if si, err := GetSymbolInfo(sym); err != nil {
 		return
@@ -58,3 +60,4 @@ func updateBidAsk(sym string, bid, ask float64) {
 		si.quote.Ask = ask
 	}
 }
+*/
