@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// seconds for Bar time interval
 type Period int64
 
 const (
@@ -18,7 +19,7 @@ const (
 	Min15 Period = 900
 	// Min30 - 30 Minute time period
 	Min30 Period = 1800
-	// Min60 - 60 Minute time period
+	// Hour1/Min60 - 60 Minute time period
 	Hour1 Period = 3600
 	// Hour2 - 2 hour time period
 	Hour2 Period = 7200
@@ -34,8 +35,9 @@ const (
 	Monthly Period = 2592000
 )
 
+// Bars struct for talib
 type Bars struct {
-	sym    string // symbol name
+	symKey  int // fastKey of symbol name
 	period Period // time period in second
 	Date   []timeT64
 	Open   []float64
@@ -45,14 +47,111 @@ type Bars struct {
 	Volume []float64
 }
 
+// unimplemented yet
 type BarCache struct {
-	sym        string
+	loadTime	timeT64
+	lastAccess	timeT64
 	basePeriod Period
+	Bars
 }
 
 var invalidPeriod = errors.New("Invalid Period")
+var invalidSymbol = errors.New("Symbol not exist")
+var noCacheBase = errors.New("No cache base Bars")
 
-func (b *Bars) Resample(newPeriod Period) (res *Bars, err error) {
+// cache for Min1/Min5 Base period Bars
+var	MinBarsBase []*Bars
+// cache for Daily Base period Bars
+var	DayBarsBase	[]*Bars
+
+
+// using int for BarCacheHash
+func getBarCacheHash(fKey int, period Period) int {
+	return (fKey << 16) | (int(period) & 0xffff)
+}
+
+// Load BaseBars cache for ATS
+//	Min1/Min5 for internal daily
+//	Daily for daily/weekly/monthly
+func (b *Bars) LoadBars(sym string, period Period) error {
+	si, err := GetSymbolInfo(sym)
+	if err != nil || si.fKey <= 0 { return invalidSymbol }
+	switch period {
+	case Min1: fallthrough
+	case Min5:
+		if cnt := len(MinBarsBase); cnt < nInstruments {
+			nb := make([]*Bars, nInstruments)
+			if cnt > 0 { copy(nb, MinBarsBase) }
+			MinBarsBase = nb
+		}
+		MinBarsBase[si.fKey -1] = b
+	case Daily:
+		if cnt := len(DayBarsBase); cnt < nInstruments {
+			nb := make([]*Bars, nInstruments)
+			if cnt > 0 { copy(nb, DayBarsBase) }
+			DayBarsBase = nb
+		}
+		DayBarsBase[si.fKey -1] = b
+	default:
+		return invalidPeriod
+	}
+	return nil
+}
+
+
+// Get Bars for symbol with period
+func GetBars(sym string, period Period) (res *Bars, err error) {
+
+	si, err := GetSymbolInfo(sym)
+	if si.fKey <= 0 { return nil, invalidSymbol }
+	res, err = GetBarsByKey(si.fKey, period)
+	return
+}
+
+// Get Bars by fastKey of symbol with period
+func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
+	var basePeriod	Period
+	if err != nil { return }
+	switch period {
+	case Min1: fallthrough
+	case Min3:
+		basePeriod = Min1
+	case Min5: fallthrough
+	case Min15: fallthrough
+	case Min30: fallthrough
+	case Hour1: fallthrough
+	case Hour2: fallthrough
+	case Hour4: fallthrough
+	case Hour8:
+		// try Min1 first
+		basePeriod = Min1
+	case Daily: fallthrough
+	case Weekly: fallthrough
+	case Monthly:
+		basePeriod = Daily
+	default:
+		return nil, invalidPeriod
+	}
+
+	var baseBars *Bars
+	switch basePeriod {
+	case Min5: fallthrough
+	case Min1:
+		if fKey > len(MinBarsBase) { return nil, noCacheBase }
+		baseBars = MinBarsBase[fKey -1]
+		if baseBars == nil || period < baseBars.period  { return nil, noCacheBase }
+		basePeriod = baseBars.period
+	case Daily:
+		if fKey > len(DayBarsBase)  { return nil, noCacheBase }
+		baseBars = DayBarsBase[fKey -1]
+		if baseBars == nil { return nil, noCacheBase }
+	}
+	if period == baseBars.period { return baseBars, nil }
+	return baseBars.reSample(period)
+}
+
+// resample Bars
+func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 	if newPeriod < b.period {
 		return nil, invalidPeriod
 	}

@@ -5,6 +5,7 @@ go:
 
 install:
   - go get gopkg.in/yaml.v2
+  - go get github.com/kjx98/golib/julian
 
 script:
     - go test -v ./...
