@@ -53,6 +53,7 @@ type SymbolInfo struct {
 	quote        Quotes
 }
 
+// fastKey for internal
 func (s *SymbolInfo) FastKey() int {
 	return s.fKey
 }
@@ -65,6 +66,7 @@ func (s *SymbolInfo) VolumeDigits() int {
 	return s.VolDigits
 }
 
+// normal Price for order
 func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	p = math.Floor(p/s.PriceStep) * s.PriceStep
 	if p < s.Lower {
@@ -75,6 +77,17 @@ func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	return p
 }
 
+// return quotes for symbol
+func (s *SymbolInfo) GetQuotes() Quotes {
+	return s.quote
+}
+
+// return ref for quotes of symbol, used by broker quotes feed
+func (s *SymbolInfo) getQuotesPtr() *Quotes {
+	return &s.quote
+}
+
+// calc order quantity according to price and value amount
 func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	if s.LotSize > 0 {
 		p *= float64(s.LotSize)
@@ -384,18 +397,21 @@ func initSymbols() {
 			} else {
 				initTemp[i].Base.bMargin = true
 			}
-			if initTemp[i].Base.VolStep == 0 {
+			if initTemp[i].Base.VolStep <= 0 {
 				initTemp[i].Base.VolStep = 1
 			}
-			if initTemp[i].Base.PriceStep == 0 {
+			if initTemp[i].Base.PriceStep <= 0 {
 				initTemp[i].Base.PriceStep = 1
 			}
-			if initTemp[i].Base.VolDigits > len(fMulti)-3 {
-				initTemp[i].Base.VolDigits = len(fMulti) - 3
-			}
-			if initTemp[i].Base.PriceDigits > len(fMulti)-3 {
-				initTemp[i].Base.PriceDigits = len(fMulti) - 3
-			}
+			// digitMulti/digitDiv verify price/volume digits
+			/*
+				if initTemp[i].Base.VolDigits > len(fMulti)-3 {
+					initTemp[i].Base.VolDigits = len(fMulti) - 3
+				}
+				if initTemp[i].Base.PriceDigits > len(fMulti)-3 {
+					initTemp[i].Base.PriceDigits = len(fMulti) - 3
+				}
+			*/
 		}
 	})
 }

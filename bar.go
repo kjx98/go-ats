@@ -73,7 +73,7 @@ func getBarCacheHash(fKey int, period Period) int {
 // Load BaseBars cache for ATS
 //	Min1/Min5 for internal daily
 //	Daily for daily/weekly/monthly
-func (b *Bars) LoadBars(sym string, period Period) error {
+func (b *Bars) loadBars(sym string, period Period) error {
 	si, err := GetSymbolInfo(sym)
 	if err != nil || si.fKey <= 0 {
 		return invalidSymbol

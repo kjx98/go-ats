@@ -2,32 +2,27 @@ package ats
 
 // No Level2 quotes yet
 type Quotes struct {
-	TodayOpen float64
-	TodayHigh float64
-	TodayLow  float64
-	Pclose    float64
-	Last      float64
-	Volume    int64
-	Turnover  float64
-	Bid       float64
-	Ask       float64
-	BidVol    int64
-	AskVol    int64
+	UpdateTime DateTimeMs
+	TodayOpen  float64
+	TodayHigh  float64
+	TodayLow   float64
+	Pclose     float64
+	Last       float64
+	Volume     int64
+	Turnover   float64
+	Bid        float64
+	Ask        float64
+	BidVol     int64
+	AskVol     int64
 }
 
-// return quotes for symbol
-func (s *SymbolInfo) GetQuotes() Quotes {
-	return s.quote
+type QuoteSubT struct {
+	Symbol    string
+	QuotesPtr *Quotes
 }
 
-// return ref for quotes of symbol, used by broker quotes feed
-func getQuotesPtr(sym string) (qq *Quotes) {
-	if si, err := GetSymbolInfo(sym); err == nil {
-		qq = &si.quote
-	}
-	return
-}
-
+// no export func for update quotes
+// Feed should update quote using buffer pointed by QuoteSubType
 /*
 func updateLastSales(sym string, last float64, vol float64) {
 	if si, err := GetSymbolInfo(sym); err != nil {
