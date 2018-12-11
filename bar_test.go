@@ -39,11 +39,11 @@ func TestPeriodBaseTime(t *testing.T) {
 	}
 	// Hour4
 	t1, _ = periodBaseTime(tt, Hour4)
-	if t1%int64(Hour4) != 0 {
-		t.Error("Hour4 not multiple of ", int(Hour4), t1)
+	if t1%int64(Hour1) != 0 {
+		t.Error("Hour4 not multiple of Hour1", int(Hour1), t1)
 	}
-	if td := timeT64(t1).Time(); td.Second() != 0 || td.Minute() != 0 || td.Hour()%4 != 0 {
-		t.Error("Hour4 not multipe:", td)
+	if td := timeT64(t1).Time(); td.Second() != 0 || td.Minute() != 0 {
+		t.Error("Hour4 not hourly multiple:", td)
 	} else {
 		t.Log("Hour4 base time:", td)
 	}
@@ -67,5 +67,15 @@ func TestPeriodBaseTime(t *testing.T) {
 	} else {
 		t.Log("Weekly base time:", td)
 	}
-
+	// Monthly
+	t1, _ = periodBaseTime(tt, Monthly)
+	if t1%int64(Daily) != 0 {
+		t1, _ = periodBaseTime(tt, Monthly)
+		t.Error("Monthly not multiple of daily", int(Daily), t1)
+	}
+	if td := timeT64(t1).Time(); td.Second() != 0 || td.Minute() != 0 || td.Hour() != 0 || td.Day() != 1 {
+		t.Error("Monthly not 1st of month:", td)
+	} else {
+		t.Log("Monthly base time:", td)
+	}
 }

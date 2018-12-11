@@ -222,18 +222,43 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 }
 
 func periodBaseTime(t int64, period Period) (res int64, mon time.Month) {
-	if period == Monthly {
-		y, m, _ := timeT64(t).Time().Date()
-		tt := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
-		mon = m
-		res = tt.Unix()
-	} else if period != Weekly {
+	switch period {
+	case Min1:
+		fallthrough
+	case Min3:
+		fallthrough
+	case Min5:
+		fallthrough
+	case Min15:
+		fallthrough
+	case Min30:
+		fallthrough
+	case Hour1:
+		fallthrough
+	case Daily:
 		res = t - (t % int64(period))
-	} else {
+	case Hour2:
+		fallthrough
+	case Hour4:
+		fallthrough
+	case Hour8:
+		res = t - (t % int64(Hour1))
+		/*
+			case Weekly: // first workday for weekly start
+				res = t - (t % int64(Daily))
+			case Monthly: // first workday for monthly start
+				res = t - (t % int64(Daily))
+				_, mon, _ = timeT64(t).Time().Date()
+		*/
+	case Weekly:
 		res = t - (t % int64(Daily))
 		if wday := timeT64(res).Time().Weekday(); wday != 0 {
 			res -= int64(Daily) * int64(wday)
 		}
+	case Monthly:
+		y, mon, _ := timeT64(t).Time().Date()
+		tt := time.Date(y, mon, 1, 0, 0, 0, 0, time.UTC)
+		res = tt.Unix()
 	}
 	return
 }
