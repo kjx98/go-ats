@@ -11,7 +11,7 @@ func (timeV timeT32) Time64() int64 {
 }
 
 func (timeV timeT32) Time() time.Time {
-	return time.Unix(int64(timeV), 0)
+	return time.Unix(int64(timeV), 0).UTC()
 }
 
 func (timeV timeT32) String() string {
@@ -21,7 +21,7 @@ func (timeV timeT32) String() string {
 type timeT64 int64
 
 func (timeV timeT64) Time() time.Time {
-	return time.Unix(int64(timeV), 0)
+	return time.Unix(int64(timeV), 0).UTC()
 }
 
 func (timeV timeT64) String() string {

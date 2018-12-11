@@ -52,7 +52,8 @@ type Broker interface {
 	GetOrder(oId int) *OrderType
 	GetOrders() []OrderType
 	GetPositions() []PositionType
-	FlushQuotes() // sync quotes from broker
+	FlushQuotes()              // sync quotes from broker
+	ServerCurrent() DateTimeMs // return current time of broker server in millisecond timestamp
 }
 
 var brokerExist = errors.New("Broker registered")

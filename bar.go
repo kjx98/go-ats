@@ -37,14 +37,16 @@ const (
 
 // Bars struct for talib
 type Bars struct {
-	symKey int32  // fastKey of symbol name
-	period Period // time period in second
-	Date   []timeT64
-	Open   []float64
-	High   []float64
-	Low    []float64
-	Close  []float64
-	Volume []float64
+	symKey  int32  // fastKey of symbol name
+	period  Period // time period in second
+	startDt DateTimeMs
+	endDt   DateTimeMs
+	Date    []timeT64
+	Open    []float64
+	High    []float64
+	Low     []float64
+	Close   []float64
+	Volume  []float64
 }
 
 // unimplemented yet
@@ -73,7 +75,7 @@ func getBarCacheHash(fKey int, period Period) int {
 // Load BaseBars cache for ATS
 //	Min1/Min5 for internal daily
 //	Daily for daily/weekly/monthly
-func (b *Bars) loadBars(sym string, period Period) error {
+func (b *Bars) loadBars(sym string, period Period, startDt, endDt DateTimeMs) error {
 	si, err := GetSymbolInfo(sym)
 	if err != nil || si.fKey <= 0 {
 		return invalidSymbol
@@ -91,6 +93,8 @@ func (b *Bars) loadBars(sym string, period Period) error {
 		}
 		b.symKey = int32(si.fKey)
 		b.period = period
+		b.startDt = startDt
+		b.endDt = endDt
 		MinBarsBase[si.fKey-1] = b
 	case Daily:
 		if cnt := len(DayBarsBase); cnt < nInstruments {
@@ -102,6 +106,8 @@ func (b *Bars) loadBars(sym string, period Period) error {
 		}
 		b.symKey = int32(si.fKey)
 		b.period = period
+		b.startDt = startDt
+		b.endDt = endDt
 		DayBarsBase[si.fKey-1] = b
 	default:
 		return invalidPeriod
@@ -109,22 +115,46 @@ func (b *Bars) loadBars(sym string, period Period) error {
 	return nil
 }
 
+func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
+	cnt := len(b.Date)
+	if cnt == 0 {
+		return b
+	}
+	lastT, _ := periodBaseTime(curTime.Unix(), b.period)
+	if int64(b.Date[cnt-1]) < lastT {
+		return b
+	}
+	for cnt > 0 {
+		if int64(b.Date[cnt-1]) < lastT {
+			break
+		}
+		cnt--
+	}
+	var newBar = Bars{}
+	newBar.period = b.period
+	newBar.Date = b.Date[:cnt]
+	newBar.Open = b.Open[:cnt]
+	newBar.High = b.High[:cnt]
+	newBar.Low = b.Low[:cnt]
+	newBar.Close = b.Close[:cnt]
+	newBar.Volume = b.Volume[:cnt]
+	return &newBar
+}
+
 // Get Bars for symbol with period
-func GetBars(sym string, period Period) (res *Bars, err error) {
+func GetBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	si, err := GetSymbolInfo(sym)
 	if si.fKey <= 0 {
-		return nil, invalidSymbol
+		err = invalidSymbol
+		return
 	}
-	res, err = GetBarsByKey(si.fKey, period)
+	res, err = GetBarsByKey(si.fKey, period, curTime)
 	return
 }
 
 // Get Bars by fastKey of symbol with period
-func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
+func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	var basePeriod Period
-	if err != nil {
-		return
-	}
 	switch period {
 	case Min1:
 		fallthrough
@@ -152,7 +182,8 @@ func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
 	case Monthly:
 		basePeriod = Daily
 	default:
-		return nil, invalidPeriod
+		err = invalidPeriod
+		return
 	}
 
 	var baseBars *Bars
@@ -161,32 +192,57 @@ func GetBarsByKey(fKey int, period Period) (res *Bars, err error) {
 		fallthrough
 	case Min1:
 		if fKey > len(MinBarsBase) {
-			return nil, noCacheBase
+			err = noCacheBase
+			return
 		}
 		baseBars = MinBarsBase[fKey-1]
 		if baseBars == nil || period < baseBars.period {
-			return nil, noCacheBase
+			err = noCacheBase
+			return
 		}
 		basePeriod = baseBars.period
 	case Daily:
 		if fKey > len(DayBarsBase) {
-			return nil, noCacheBase
+			err = noCacheBase
+			return
 		}
 		baseBars = DayBarsBase[fKey-1]
 		if baseBars == nil {
-			return nil, noCacheBase
+			err = noCacheBase
+			return
 		}
 	}
-	if period == baseBars.period {
-		return baseBars, nil
+	if period != baseBars.period {
+		if res, err = baseBars.reSample(period); err != nil {
+			return
+		}
 	}
-	return baseBars.reSample(period)
+	res = baseBars.timeBars(curTime)
+	return
+}
+
+func periodBaseTime(t int64, period Period) (res int64, mon time.Month) {
+	if period == Monthly {
+		y, m, _ := timeT64(t).Time().Date()
+		tt := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
+		mon = m
+		res = tt.Unix()
+	} else if period != Weekly {
+		res = t - (t % int64(period))
+	} else {
+		res = t - (t % int64(Daily))
+		if wday := timeT64(res).Time().Weekday(); wday != 0 {
+			res -= int64(Daily) * int64(wday)
+		}
+	}
+	return
 }
 
 // resample Bars
 func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 	if newPeriod < b.period {
-		return nil, invalidPeriod
+		err = invalidPeriod
+		return
 	}
 	var vOpen, vHigh, vLow, vClose, volume float64
 	var vDate int64
@@ -230,8 +286,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 				volume = 0
 			}
 			if vDate == 0 {
-				vDate = int64(b.Date[i])
-				vDate -= (vDate % int64(newPeriod))
+				vDate, _ = periodBaseTime(int64(b.Date[i]), newPeriod)
 				vOpen = b.Open[i]
 			}
 			if vHigh == 0 || b.High[i] > vHigh {
@@ -273,10 +328,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 				volume = 0
 			}
 			if vDate == 0 {
-				y, m, _ := b.Date[i].Time().Date()
-				tt := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
-				mon = m
-				vDate = tt.Unix()
+				vDate, mon = periodBaseTime(int64(b.Date[i]), newPeriod)
 				vOpen = b.Open[i]
 			}
 			if vHigh == 0 || b.High[i] > vHigh {
@@ -297,5 +349,5 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 			res.Volume = append(res.Volume, volume)
 		}
 	}
-	return res, nil
+	return
 }
