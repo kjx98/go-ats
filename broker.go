@@ -8,10 +8,10 @@ import (
 type OrderDirT int32
 
 const (
-	OrderBuy   OrderDirT = 0
-	OrderSell  OrderDirT = 1
-	OrderCover OrderDirT = 2
-	OrderClose OrderDirT = 3
+	OrderDirBuy   OrderDirT = 0
+	OrderDirSell  OrderDirT = 1
+	OrderDirCover OrderDirT = 2
+	OrderDirClose OrderDirT = 3
 )
 
 // Order Sign
@@ -24,18 +24,18 @@ func (orDir OrderDirT) Sign() int {
 // PosOffset
 //	return true for position close/offset
 func (orDir OrderDirT) PosOffset() bool {
-	return orDir > OrderSell
+	return orDir > OrderDirSell
 }
 
 func (orDir OrderDirT) String() string {
 	switch orDir {
-	case OrderBuy:
+	case OrderDirBuy:
 		return "Buy"
-	case OrderSell:
+	case OrderDirSell:
 		return "Sell"
-	case OrderCover:
+	case OrderDirCover:
 		return "Cover"
-	case OrderClose:
+	case OrderDirClose:
 		return "SellClose"
 	}
 	return "NA"
@@ -103,14 +103,16 @@ type Broker interface {
 	Login(uname string, key string) error
 	SubscribeQuotes([]QuoteSubT) error
 
-	GetEquity() float64                                                                      // return equity value current
-	GetBalance() float64                                                                     // Balance after last settlement
-	GetCash() float64                                                                        // available free cash
-	GetFreeMargin() float64                                                                  // availble free margin
-	OrderSend(sym string, dir OrderDirT, qty int, prc float64, stopL float64, magic int) int // return >=0 on success
-	OrderCancel(oid int)                                                                     // Cancel Order
+	GetEquity() float64                                                           // return equity value current
+	GetBalance() float64                                                          // Balance after last settlement
+	GetCash() float64                                                             // available free cash
+	GetFreeMargin() float64                                                       // availble free margin
+	SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int // return oId >=0 on success
+	CancelOrder(oid int)                                                          // Cancel Order
+	CloseOrder(oId int)
 	GetOrder(oId int) *OrderType
 	GetOrders() []OrderType
+	GetPosition(sym string) PositionType
 	GetPositions() []PositionType
 	FlushQuotes()            // sync quotes from broker
 	TimeCurrent() DateTimeMs // return current time of broker server in millisecond timestamp

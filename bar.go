@@ -54,7 +54,6 @@ type BarCache struct {
 	loadTime   timeT64
 	lastAccess timeT64
 	basePeriod Period
-	period     Period
 	Bars
 }
 
@@ -134,6 +133,8 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 	}
 	var newBar = Bars{}
 	newBar.period = b.period
+	newBar.startDt = b.startDt
+	newBar.endDt = curTime
 	newBar.Date = b.Date[:cnt]
 	newBar.Open = b.Open[:cnt]
 	newBar.High = b.High[:cnt]
@@ -188,14 +189,6 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		return
 	}
 
-	if period != basePeriod {
-		bkey := getBarCacheHash(fKey, period)
-		if cc, ok := cacheBars[bkey]; ok {
-			cc.lastAccess = timeT64(time.Now().Unix())
-			res = &cc.Bars
-			return
-		}
-	}
 	var baseBars *Bars
 	switch basePeriod {
 	case Min5:
@@ -222,7 +215,19 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 			return
 		}
 	}
+
 	if period != baseBars.period {
+		bkey := getBarCacheHash(fKey, period)
+		if cc, ok := cacheBars[bkey]; ok {
+			res = &cc.Bars
+			if res.endDt >= baseBars.endDt {
+				cc.lastAccess = timeT64(time.Now().Unix())
+				res = res.timeBars(curTime)
+				return
+			}
+			// baseBars get updated, resample
+			delete(cacheBars, bkey)
+		}
 		if res, err = baseBars.reSample(period); err != nil {
 			return
 		}
@@ -230,11 +235,12 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		cc.Bars = *res
 		cc.lastAccess = timeT64(time.Now().Unix())
 		cc.loadTime = cc.lastAccess
-		cc.period = period
 		cc.basePeriod = basePeriod
-		cacheBars[getBarCacheHash(fKey, period)] = &cc
+		cacheBars[bkey] = &cc
+	} else {
+		res = baseBars
 	}
-	res = baseBars.timeBars(curTime)
+	res = res.timeBars(curTime)
 	return
 }
 
@@ -391,5 +397,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 			res.Volume = append(res.Volume, volume)
 		}
 	}
+	res.startDt = b.startDt
+	res.endDt = b.endDt
 	return
 }
