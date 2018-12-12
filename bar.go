@@ -49,11 +49,12 @@ type Bars struct {
 	Volume  []float64
 }
 
-// unimplemented yet
+// only cache for non basePeriod Bars
 type BarCache struct {
 	loadTime   timeT64
 	lastAccess timeT64
 	basePeriod Period
+	period     Period
 	Bars
 }
 
@@ -62,10 +63,11 @@ var invalidSymbol = errors.New("Symbol not exist")
 var noCacheBase = errors.New("No cache base Bars")
 
 // cache for Min1/Min5 Base period Bars
-var MinBarsBase []*Bars
+var minBarsBase []*Bars
 
 // cache for Daily Base period Bars
-var DayBarsBase []*Bars
+var dayBarsBase []*Bars
+var cacheBars map[int]*BarCache
 
 // using int for BarCacheHash
 func getBarCacheHash(fKey int, period Period) int {
@@ -84,31 +86,31 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt DateTimeMs) er
 	case Min1:
 		fallthrough
 	case Min5:
-		if cnt := len(MinBarsBase); cnt < nInstruments {
+		if cnt := len(minBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
 			if cnt > 0 {
-				copy(nb, MinBarsBase)
+				copy(nb, minBarsBase)
 			}
-			MinBarsBase = nb
+			minBarsBase = nb
 		}
 		b.symKey = int32(si.fKey)
 		b.period = period
 		b.startDt = startDt
 		b.endDt = endDt
-		MinBarsBase[si.fKey-1] = b
+		minBarsBase[si.fKey-1] = b
 	case Daily:
-		if cnt := len(DayBarsBase); cnt < nInstruments {
+		if cnt := len(dayBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
 			if cnt > 0 {
-				copy(nb, DayBarsBase)
+				copy(nb, dayBarsBase)
 			}
-			DayBarsBase = nb
+			dayBarsBase = nb
 		}
 		b.symKey = int32(si.fKey)
 		b.period = period
 		b.startDt = startDt
 		b.endDt = endDt
-		DayBarsBase[si.fKey-1] = b
+		dayBarsBase[si.fKey-1] = b
 	default:
 		return invalidPeriod
 	}
@@ -186,27 +188,35 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		return
 	}
 
+	if period != basePeriod {
+		bkey := getBarCacheHash(fKey, period)
+		if cc, ok := cacheBars[bkey]; ok {
+			cc.lastAccess = timeT64(time.Now().Unix())
+			res = &cc.Bars
+			return
+		}
+	}
 	var baseBars *Bars
 	switch basePeriod {
 	case Min5:
 		fallthrough
 	case Min1:
-		if fKey > len(MinBarsBase) {
+		if fKey > len(minBarsBase) {
 			err = noCacheBase
 			return
 		}
-		baseBars = MinBarsBase[fKey-1]
+		baseBars = minBarsBase[fKey-1]
 		if baseBars == nil || period < baseBars.period {
 			err = noCacheBase
 			return
 		}
 		basePeriod = baseBars.period
 	case Daily:
-		if fKey > len(DayBarsBase) {
+		if fKey > len(dayBarsBase) {
 			err = noCacheBase
 			return
 		}
-		baseBars = DayBarsBase[fKey-1]
+		baseBars = dayBarsBase[fKey-1]
 		if baseBars == nil {
 			err = noCacheBase
 			return
@@ -216,6 +226,13 @@ func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		if res, err = baseBars.reSample(period); err != nil {
 			return
 		}
+		cc := BarCache{}
+		cc.Bars = *res
+		cc.lastAccess = timeT64(time.Now().Unix())
+		cc.loadTime = cc.lastAccess
+		cc.period = period
+		cc.basePeriod = basePeriod
+		cacheBars[getBarCacheHash(fKey, period)] = &cc
 	}
 	res = baseBars.timeBars(curTime)
 	return
