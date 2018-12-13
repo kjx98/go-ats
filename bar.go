@@ -145,18 +145,18 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 }
 
 // Get Bars for symbol with period
-func GetBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err error) {
+func getBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	si, err := GetSymbolInfo(sym)
 	if si.fKey <= 0 {
 		err = invalidSymbol
 		return
 	}
-	res, err = GetBarsByKey(si.fKey, period, curTime)
+	res, err = getBarsByKey(si.fKey, period, curTime)
 	return
 }
 
 // Get Bars by fastKey of symbol with period
-func GetBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err error) {
+func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	var basePeriod Period
 	switch period {
 	case Min1:

@@ -25,6 +25,10 @@ func (dtMs DateTimeMs) Millisecond() int {
 	return int(dtMs & 0x3ff)
 }
 
+func (t timeT64) DateTimeMs() DateTimeMs {
+	return DateTimeMs(int64(t) << 10)
+}
+
 // convert time.Time to DateTimeMs
 func ToDateTimeMs(dt time.Time) DateTimeMs {
 	sec := dt.Unix() << 10

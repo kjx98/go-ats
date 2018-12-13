@@ -23,7 +23,7 @@ func (orDir OrderDirT) Sign() int {
 
 // PosOffset
 //	return true for position close/offset
-func (orDir OrderDirT) PosOffset() bool {
+func (orDir OrderDirT) IsOffset() bool {
 	return orDir > OrderDirSell
 }
 
@@ -99,8 +99,8 @@ type PositionType struct {
 }
 
 type Broker interface {
-	Open() (Broker, error) // on success return interface pointer
-	Login(uname string, key string) error
+	Open(ch chan<- QuoteEvent) (Broker, error) // on success return interface pointer
+	Start(c Config) error
 	SubscribeQuotes([]QuoteSubT) error
 
 	GetEquity() float64                                                           // return equity value current
@@ -130,9 +130,9 @@ func RegisterBroker(name string, inf Broker) error {
 	return nil
 }
 
-func OpenBroker(name string) (Broker, error) {
+func openBroker(name string, ch chan<- QuoteEvent) (Broker, error) {
 	if b, ok := brokers[name]; ok {
-		return b.Open()
+		return b.Open(ch)
 	}
 	return nil, brokerNotExist
 }

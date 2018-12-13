@@ -21,6 +21,13 @@ type QuoteSubT struct {
 	QuotesPtr *Quotes
 }
 
+// QuoteEvent used by broker to notify quote/tick/bar update
+// EventId    0   for quote/tick update, else bar period
+type QuoteEvent struct {
+	Symbol  string
+	EventId int
+}
+
 // no export func for update quotes
 // Feed should update quote using buffer pointed by QuoteSubType
 /*
