@@ -9,6 +9,7 @@ sh6:
         priceStep: 0.01
         digits: 2
         volumeDigits: 0
+        commissionRate: 0.001
     tickerLen: 8
     dateLen: 0
 
@@ -23,6 +24,7 @@ sh5:
         priceStep: 0.001
         digits: 3
         volumeDigits: 0
+        commissionRate: 0.001
     tickerLen: 8
     dateLen: 0
 
@@ -37,6 +39,9 @@ sh204:
         priceStep: 0.001
         digits: 3
         volumeDigits: 0
+        lotSize: 100
+        commissionRate: 0.001
+        commisssionType: 1
     tickerLen: 8
     dateLen: 0
 
@@ -51,6 +56,7 @@ sz0:
         priceStep: 0.01
         digits: 2
         volumeDigits: 0
+        commissionRate: 0.001
     tickerLen: 8
     dateLen: 0
 
@@ -65,6 +71,7 @@ sz3:
         priceStep: 0.01
         digits: 2
         volumeDigits: 0
+        commissionRate: 0.001
     tickerLen: 8
     dateLen: 0
 
@@ -79,6 +86,9 @@ sz131:
         priceStep: 0.001
         digits: 3
         volumeDigits: 0
+        lotSize: 100
+        commissionRate: 0.001
+        commisssionType: 1
     tickerLen: 8
     dateLen: 0
 
@@ -95,6 +105,7 @@ cu:
         volumeDigits: 0
         lotSize: 5
         margin: 0.1
+        commissionRate: 0.001
     tickerLen: 6
     dateLen: 4
 
@@ -111,6 +122,8 @@ ES:
         volumeDigits: 0
         lotSize: 50
         margin: 0.05
+        commissionRate: 3
+        commisssionType: 1
     tickerLen: 4
     dateLen: 2
     usTicker: true
@@ -126,9 +139,11 @@ EUR:
         priceStep: 0.00001
         digits: 5
         volumeDigits: 2
-        lotSize: 100
+        lotSize: 1000
         margin: 0.02
         forex: true
+        commissionRate: 0.1
+        commisssionType: 1
     tickerLen: 6
     regexp: true
 
@@ -143,9 +158,11 @@ USD:
         priceStep: 0.00001
         digits: 5
         volumeDigits: 2
-        lotSize: 100
+        lotSize: 1000
         margin: 0.02
         forex: true
+        commissionRate: 0.1
+        commisssionType: 1
     tickerLen: 6
     regexp: true
 
@@ -160,9 +177,11 @@ GBP:
         priceStep: 0.00001
         digits: 5
         volumeDigits: 2
-        lotSize: 100
+        lotSize: 1000
         margin: 0.02
         forex: true
+        commissionRate: 0.1
+        commisssionType: 1
     tickerLen: 6
 
 XAU:
@@ -179,6 +198,8 @@ XAU:
         lotSize: 100
         margin: 0.02
         forex: true
+        commissionRate: 0.5
+        commisssionType: 1
     tickerLen: 6
 
 BTC:
@@ -194,6 +215,7 @@ BTC:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        commissionRate: 0.001
     tickerLen: 6
 
 ETH:
@@ -209,6 +231,7 @@ ETH:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        commissionRate: 0.001
     tickerLen: 6
 
 EOS:
@@ -224,6 +247,7 @@ EOS:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        commissionRate: 0.001
     tickerLen: 6
 
 
@@ -238,6 +262,8 @@ us-equity:
         priceStep: 0.01
         digits: 2
         volumeDigits: 0
+        commissionRate: 10
+        commisssionType: 2
     tickerLen: 5
     usTicker: true
     regexp: true

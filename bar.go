@@ -39,8 +39,8 @@ const (
 type Bars struct {
 	symKey  int32  // fastKey of symbol name
 	period  Period // time period in second
-	startDt DateTimeMs
-	endDt   DateTimeMs
+	startDt timeT64
+	endDt   timeT64
 	Date    []timeT64
 	Open    []float64
 	High    []float64
@@ -76,10 +76,13 @@ func getBarCacheHash(fKey int, period Period) int {
 // Load BaseBars cache for ATS
 //	Min1/Min5 for internal daily
 //	Daily for daily/weekly/monthly
-func (b *Bars) loadBars(sym string, period Period, startDt, endDt DateTimeMs) error {
+func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error {
 	si, err := GetSymbolInfo(sym)
 	if err != nil || si.fKey <= 0 {
 		return invalidSymbol
+	}
+	if len(b.Date) == 0 {
+		return nil
 	}
 	switch period {
 	case Min1:
@@ -92,11 +95,6 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt DateTimeMs) er
 			}
 			minBarsBase = nb
 		}
-		b.symKey = int32(si.fKey)
-		b.period = period
-		b.startDt = startDt
-		b.endDt = endDt
-		minBarsBase[si.fKey-1] = b
 	case Daily:
 		if cnt := len(dayBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
@@ -105,14 +103,21 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt DateTimeMs) er
 			}
 			dayBarsBase = nb
 		}
-		b.symKey = int32(si.fKey)
-		b.period = period
-		b.startDt = startDt
-		b.endDt = endDt
-		dayBarsBase[si.fKey-1] = b
 	default:
 		return invalidPeriod
 	}
+	if startDt == 0 || startDt > b.Date[0] {
+		startDt = b.Date[0]
+	}
+	if endDt == 0 {
+		cnt := len(b.Date)
+		endDt = timeT64(int64(b.Date[cnt-1]) + int64(b.period))
+	}
+	b.symKey = int32(si.fKey)
+	b.period = period
+	b.startDt = startDt
+	b.endDt = endDt
+	dayBarsBase[si.fKey-1] = b
 	return nil
 }
 
@@ -134,7 +139,7 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 	var newBar = Bars{}
 	newBar.period = b.period
 	newBar.startDt = b.startDt
-	newBar.endDt = curTime
+	newBar.endDt = timeT64(lastT)
 	newBar.Date = b.Date[:cnt]
 	newBar.Open = b.Open[:cnt]
 	newBar.High = b.High[:cnt]

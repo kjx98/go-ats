@@ -121,6 +121,7 @@ type Broker interface {
 var brokerExist = errors.New("Broker registered")
 var brokerNotExist = errors.New("Borker not registered")
 var brokers map[string]Broker = map[string]Broker{}
+var defaultBroker = "simTrade"
 
 func RegisterBroker(name string, inf Broker) error {
 	if _, ok := brokers[name]; ok {
@@ -131,6 +132,9 @@ func RegisterBroker(name string, inf Broker) error {
 }
 
 func openBroker(name string, ch chan<- QuoteEvent) (Broker, error) {
+	if name == "" {
+		name = defaultBroker
+	}
 	if b, ok := brokers[name]; ok {
 		return b.Open(ch)
 	}

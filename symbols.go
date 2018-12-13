@@ -27,18 +27,22 @@ const (
 // VolDigits
 // Margin	suppose initial margin and maintain margin are same, no support for options
 // IsForex	Forex/CFD ... OTC instrument without last/sales
+// CommissionType		0	per Amount, 1 Per Lot, 2 Per Trade
 type symbolBase struct {
-	Market      string  `yaml:"market,omitempty"`
-	VolMin      int     `yaml:"volumeMin"`
-	VolMax      int     `yaml:"volumeMax"`
-	VolStep     int     `yaml:"volumeStep"`
-	PriceStep   float64 `yaml:"priceStep"`
-	PriceDigits int     `yaml:"digits,omitempty"`
-	VolDigits   int     `yaml:"volumeDigits,omitempty"`
-	LotSize     int     `yaml:"lotSize,omitempty"`
-	Margin      float64 `yaml:"margin,omitempty"`
-	IsForex     bool    `yaml:"forex,omitempty"`
-	bMargin     bool
+	Market         string  `yaml:"market,omitempty"`
+	VolMin         int     `yaml:"volumeMin"`
+	VolMax         int     `yaml:"volumeMax"`
+	VolStep        int     `yaml:"volumeStep"`
+	PriceStep      float64 `yaml:"priceStep"`
+	PriceDigits    int     `yaml:"digits,omitempty"`
+	VolDigits      int     `yaml:"volumeDigits,omitempty"`
+	LotSize        int     `yaml:"lotSize,omitempty"`
+	Margin         float64 `yaml:"margin,omitempty"`
+	IsForex        bool    `yaml:"forex,omitempty"`
+	CurrencySym    string  `yaml:"currency,omitempty"`
+	CommissionType int     `yaml:"commisssionType,omitempty"`
+	CommissionRate float64 `yaml:"commissionRate,omitempty"`
+	bMargin        bool
 }
 
 // SymbolInfo symbol traits of instrument
