@@ -33,6 +33,6 @@ func (timeV timeT64) String() string {
 	return timeV.Time().Format("2006-01-02 15:04:05")
 }
 
-func FromTime(t time.Time) timeT64 {
+func timeToT64(t time.Time) timeT64 {
 	return timeT64(t.Unix())
 }

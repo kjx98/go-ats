@@ -91,7 +91,7 @@ func (s *SymbolInfo) getQuotesPtr() *Quotes {
 	return &s.quote
 }
 
-// calc order quantity according to price and value amount
+// calc order quantity according to price and value amount in full margin
 func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	if s.LotSize > 0 {
 		p *= float64(s.LotSize)
@@ -100,6 +100,30 @@ func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	if s.bMargin {
 		res /= s.Margin
 	}
+	volStep := float64(s.VolStep)
+	volMin := float64(s.VolMin)
+	volMax := float64(s.VolMax)
+	if vd := s.VolDigits; vd > 0 {
+		mm := digitDiv(vd)
+		volStep *= mm
+		volMin *= mm
+		volMax *= mm
+	}
+	res = math.Floor(res/volStep) * volStep
+	if res < volMin {
+		res = volMin
+	} else if res > volMax {
+		res = volMax
+	}
+	return res
+}
+
+// calc order quantity according to price and value amount according to margin
+func (s *SymbolInfo) CalcRiskVolume(amt float64, riskPrice float64) float64 {
+	if s.LotSize > 0 {
+		riskPrice *= float64(s.LotSize)
+	}
+	res := amt / riskPrice
 	volStep := float64(s.VolStep)
 	volMin := float64(s.VolMin)
 	volMax := float64(s.VolMax)
@@ -167,6 +191,16 @@ func digitDiv(ndigit int) float64 {
 		return 1.0
 	}
 	return fDiv[ndigit+2]
+}
+
+func DigitToInt(v float64, ndigit int) int {
+	res := v * digitMulti(ndigit)
+	return int(res)
+}
+
+func DigitFromInt(v int, ndigit int) float64 {
+	res := float64(v) * digitDiv(ndigit)
+	return res
 }
 
 func (t *symbolTemplate) String() (res string) {

@@ -100,7 +100,8 @@ type PositionType struct {
 
 type Broker interface {
 	Open(ch chan<- QuoteEvent) (Broker, error) // on success return interface pointer
-	Start(c Config) error
+	Start(c Config) error                      // user/pwd, startDate/endDate ...
+	Stop() error                               // stop broker, logout, cleanup
 	SubscribeQuotes([]QuoteSubT) error
 
 	GetEquity() float64                                                           // return equity value current
@@ -114,14 +115,13 @@ type Broker interface {
 	GetOrders() []OrderType
 	GetPosition(sym string) PositionType
 	GetPositions() []PositionType
-	FlushQuotes()            // sync quotes from broker
 	TimeCurrent() DateTimeMs // return current time of broker server in millisecond timestamp
 }
 
 var brokerExist = errors.New("Broker registered")
 var brokerNotExist = errors.New("Borker not registered")
 var brokers map[string]Broker = map[string]Broker{}
-var defaultBroker = "simTrade"
+var defaultBroker = "simBroker"
 
 func RegisterBroker(name string, inf Broker) error {
 	if _, ok := brokers[name]; ok {

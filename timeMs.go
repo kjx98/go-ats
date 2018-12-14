@@ -30,7 +30,7 @@ func (t timeT64) DateTimeMs() DateTimeMs {
 }
 
 // convert time.Time to DateTimeMs
-func ToDateTimeMs(dt time.Time) DateTimeMs {
+func TimeToDateTimeMs(dt time.Time) DateTimeMs {
 	sec := dt.Unix() << 10
 	ms := dt.Nanosecond() / 1e6
 	//return DateTimeMs(sec | int64(ms&0x3ff))

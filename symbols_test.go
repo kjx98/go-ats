@@ -78,3 +78,41 @@ func TestSymbolsFunc(t *testing.T) {
 		t.Logf("%s digits/volDigits: %d/%d", si.Ticker, si.Digits(), si.VolumeDigits())
 	}
 }
+
+func TestSymbolInfo_CalcRiskVolume(t *testing.T) {
+	type args struct {
+		amt       float64
+		riskPrice float64
+	}
+	tests := []struct {
+		name string
+		sym  string
+		args args
+		want float64
+	}{
+		// TODO: Add test cases.
+		{"testRiskVol1", "sh600600", args{10000, 12.51}, 700},
+		{"testRiskVol2", "cu1903", args{10000, 12.5}, 160},
+		{"testRiskVol3", "ESZ8", args{10000, 12.52}, 15},
+		{"testRiskVol4", "SPY", args{10000, 12.55}, 796},
+		{"testRiskVol5", "EURUSD", args{10000, 12.8}, 0.78},
+	}
+	initSymbols()
+	newSymbolInfo("sh600600")
+	newSymbolInfo("cu1903")
+	newSymbolInfo("ESZ8")
+	newSymbolInfo("SPY")
+	newSymbolInfo("EURUSD")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := GetSymbolInfo(tt.sym)
+			if err != nil {
+				t.Errorf("GetSymbolInfo(%s) %v", tt.sym, err)
+				return
+			}
+			if got := s.CalcRiskVolume(tt.args.amt, tt.args.riskPrice); got != tt.want {
+				t.Errorf("SymbolInfo.CalcRiskVolume() for %s = %v, want %v", tt.sym, got, tt.want)
+			}
+		})
+	}
+}
