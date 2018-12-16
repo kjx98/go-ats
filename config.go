@@ -24,6 +24,15 @@ func (c Config) GetString(key string, def string) string {
 	return def
 }
 
+func (c Config) GetStrings(key string) []string {
+	if r, ok := c[key]; ok {
+		if res, ok := r.([]string); ok {
+			return res
+		}
+	}
+	return []string{}
+}
+
 func (c Config) GetFloat64(key string, def float64) float64 {
 	if r, ok := c[key]; ok {
 		if res, ok := r.(float64); ok {

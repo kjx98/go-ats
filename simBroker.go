@@ -39,19 +39,19 @@ func (b *simBroker) SubscribeQuotes([]QuoteSubT) error {
 	return nil
 }
 
-func (b *simBroker) GetEquity() float64 {
+func (b *simBroker) Equity() float64 {
 	return b.equity
 }
 
-func (b *simBroker) GetBalance() float64 {
+func (b *simBroker) Balance() float64 {
 	return b.balance
 }
 
-func (b *simBroker) GetCash() float64 {
+func (b *simBroker) Cash() float64 {
 	return b.fund
 }
 
-func (b *simBroker) GetFreeMargin() float64 {
+func (b *simBroker) FreeMargin() float64 {
 	return b.equity - b.margin
 }
 

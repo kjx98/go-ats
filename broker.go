@@ -104,10 +104,10 @@ type Broker interface {
 	Stop() error                               // stop broker, logout, cleanup
 	SubscribeQuotes([]QuoteSubT) error
 
-	GetEquity() float64                                                           // return equity value current
-	GetBalance() float64                                                          // Balance after last settlement
-	GetCash() float64                                                             // available free cash
-	GetFreeMargin() float64                                                       // availble free margin
+	Equity() float64                                                              // return equity value current
+	Balance() float64                                                             // Balance after last settlement
+	Cash() float64                                                                // available free cash
+	FreeMargin() float64                                                          // availble free margin
 	SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int // return oId >=0 on success
 	CancelOrder(oid int)                                                          // Cancel Order
 	CloseOrder(oId int)

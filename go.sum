@@ -1,5 +1,6 @@
 github.com/cweill/gotests v1.5.2 h1:kKqmKmS2wCV3tuLnfpbiuN8OlkosQZTpCfiqmiuNAsA=
 github.com/cweill/gotests v1.5.2/go.mod h1:XZYOJkGVkCRoymaIzmp9Wyi3rUgfA3oOnkuljYrjFV8=
+github.com/influxdata/platform v0.0.0-20181215062053-6489f3320055 h1:o0vSc4kXZVJi/lJs1SX5IvqP7BXy51j3wdR1r3moG08=
 github.com/kjx98/golib v0.1.0 h1:O7C+MQ6dMTbSHNNQfusgUrILqORJ7NQY6xPB4adsyeo=
 github.com/kjx98/golib v0.1.0/go.mod h1:FGQfzmBIEYrqb6FwqHoyvegnZiijho2yEV4LG9Rwx5k=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
