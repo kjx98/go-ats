@@ -109,13 +109,7 @@ func (sc *strategyRunner) emitEvent(si *SymbolInfo, evId int) {
 		switch Period(evId) {
 		case 0:
 			strat.OnTick(si.Ticker)
-		case Min1:
-			fallthrough
-		case Min5:
-			fallthrough
-		case Hour1:
-			fallthrough
-		case Daily:
+		case Min1, Min5, Hour1, Daily:
 			strat.OnBar(si.Ticker, Period(evId))
 		}
 	}

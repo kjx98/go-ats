@@ -85,9 +85,7 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error
 		return nil
 	}
 	switch period {
-	case Min1:
-		fallthrough
-	case Min5:
+	case Min1, Min5:
 		if cnt := len(minBarsBase); cnt < nInstruments {
 			nb := make([]*Bars, nInstruments)
 			if cnt > 0 {
@@ -164,30 +162,14 @@ func getBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err erro
 func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	var basePeriod Period
 	switch period {
-	case Min1:
-		fallthrough
-	case Min3:
+	case Min1, Min3:
 		basePeriod = Min1
-	case Min5:
+	case Min5, Min15, Min30:
 		fallthrough
-	case Min15:
-		fallthrough
-	case Min30:
-		fallthrough
-	case Hour1:
-		fallthrough
-	case Hour2:
-		fallthrough
-	case Hour4:
-		fallthrough
-	case Hour8:
+	case Hour1, Hour2, Hour4, Hour8:
 		// try Min1 first
 		basePeriod = Min1
-	case Daily:
-		fallthrough
-	case Weekly:
-		fallthrough
-	case Monthly:
+	case Daily, Weekly, Monthly:
 		basePeriod = Daily
 	default:
 		err = invalidPeriod
@@ -196,9 +178,7 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 
 	var baseBars *Bars
 	switch basePeriod {
-	case Min5:
-		fallthrough
-	case Min1:
+	case Min5, Min1:
 		if fKey > len(minBarsBase) {
 			err = noCacheBase
 			return
@@ -251,33 +231,21 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 
 func periodBaseTime(t int64, period Period) (res int64, mon time.Month) {
 	switch period {
-	case Min1:
+	case Min1, Min3, Min5, Min15, Min30:
 		fallthrough
-	case Min3:
-		fallthrough
-	case Min5:
-		fallthrough
-	case Min15:
-		fallthrough
-	case Min30:
-		fallthrough
-	case Hour1:
+	case Hour1, Hour2, Hour4, Hour8:
 		fallthrough
 	case Daily:
 		res = t - (t % int64(period))
-	case Hour2:
-		fallthrough
-	case Hour4:
-		fallthrough
-	case Hour8:
-		res = t - (t % int64(Hour1))
-		/*
-			case Weekly: // first workday for weekly start
-				res = t - (t % int64(Daily))
-			case Monthly: // first workday for monthly start
-				res = t - (t % int64(Daily))
-				_, mon, _ = timeT64(t).Time().Date()
-		*/
+	/*
+		case Hour2, Hour4, Hour8:
+			res = t - (t % int64(Hour1))
+		case Weekly: // first workday for weekly start
+			res = t - (t % int64(Daily))
+		case Monthly: // first workday for monthly start
+			res = t - (t % int64(Daily))
+			_, mon, _ = timeT64(t).Time().Date()
+	*/
 	case Weekly:
 		res = t - (t % int64(Daily))
 		if wday := timeT64(res).Time().Weekday(); wday != 0 {
@@ -300,21 +268,9 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 	var vOpen, vHigh, vLow, vClose, volume float64
 	var vDate int64
 	switch newPeriod {
-	case Min3:
+	case Min3, Min5, Min15, Min30:
 		fallthrough
-	case Min5:
-		fallthrough
-	case Min15:
-		fallthrough
-	case Min30:
-		fallthrough
-	case Hour1:
-		fallthrough
-	case Hour2:
-		fallthrough
-	case Hour4:
-		fallthrough
-	case Hour8:
+	case Hour1, Hour2, Hour4, Hour8:
 		fallthrough
 	case Daily:
 		fallthrough

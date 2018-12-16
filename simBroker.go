@@ -1,8 +1,10 @@
 package ats
 
-type simBroker struct {
-	startTime  timeT64
-	endTime    timeT64
+import (
+	"sync"
+)
+
+type account struct {
 	fundStart  float64
 	equity     float64
 	balance    float64
@@ -13,81 +15,112 @@ type simBroker struct {
 	lossTrades int
 	profit     float64
 	loss       float64
-	current    DateTimeMs
-	evChan     chan<- QuoteEvent
-	orders     []OrderType
-	pos        []PositionType
+
+	evChan chan<- QuoteEvent
+	orders []int
+	pos    []PositionType
 }
 
-func (b *simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
-	var bb = simBroker{evChan: ch}
-	return &bb, nil
+type simOrderType struct {
+	simBroker
+	OrderType
 }
 
-func (b *simBroker) Start(c Config) error {
+var acctLock sync.RWMutex
+var nAccounts int
+var simAccounts = []*account{}
+var orderLock sync.RWMutex
+var nOrders int
+var simOrders = []simOrderType{}
+var startTime, endTime timeT64
+var simCurrent DateTimeMs
+
+type simBroker int
+
+func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
+	acctLock.Lock()
+	defer acctLock.Unlock()
+	var acct = account{evChan: ch}
+	bb := simBroker(nAccounts)
+	nAccounts++
+	simAccounts = append(simAccounts, &acct)
+	return bb, nil
+}
+
+func (b simBroker) Start(c Config) error {
 	// read Config, ...
 	// start goroutine for simulate/backtesting
 	return nil
 }
 
-func (b *simBroker) Stop() error {
+func (b simBroker) Stop() error {
 	return nil
 }
 
-func (b *simBroker) SubscribeQuotes([]QuoteSubT) error {
+func (b simBroker) SubscribeQuotes([]QuoteSubT) error {
 	// prepare Bars
 	return nil
 }
 
-func (b *simBroker) Equity() float64 {
-	return b.equity
+func (b simBroker) Equity() float64 {
+	acct := simAccounts[int(b)]
+	return acct.equity
 }
 
-func (b *simBroker) Balance() float64 {
-	return b.balance
+func (b simBroker) Balance() float64 {
+	acct := simAccounts[int(b)]
+	return acct.balance
 }
 
-func (b *simBroker) Cash() float64 {
-	return b.fund
+func (b simBroker) Cash() float64 {
+	acct := simAccounts[int(b)]
+	return acct.fund
 }
 
-func (b *simBroker) FreeMargin() float64 {
-	return b.equity - b.margin
+func (b simBroker) FreeMargin() float64 {
+	acct := simAccounts[int(b)]
+	return acct.equity - acct.margin
 }
 
-func (b *simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int {
+func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int {
 	// tobe fix
 	return 0
 }
 
-func (b *simBroker) CancelOrder(oid int) {
-	// find order, cancel
-	if oid >= len(b.orders) {
+func (b simBroker) CancelOrder(oid int) {
+	acct := simAccounts[int(b)]
+	if oid >= len(acct.orders) {
 		return
 	}
 }
 
-func (b *simBroker) CloseOrder(oId int) {
+func (b simBroker) CloseOrder(oId int) {
+	acct := simAccounts[int(b)]
 	// if open, close with market
 	// if stoploss, remove stoploss, change to market
-	if oId >= len(b.orders) {
+	if oId >= len(acct.orders) {
 		return
 	}
 }
 
-func (b *simBroker) GetOrder(oId int) *OrderType {
-	if oId >= len(b.orders) {
+func (b simBroker) GetOrder(oId int) *OrderType {
+	orderLock.RLock()
+	defer orderLock.RUnlock()
+	if oId >= nOrders {
 		return nil
 	}
-	return &b.orders[oId]
+
+	return &simOrders[oId].OrderType
 }
 
-func (b *simBroker) GetOrders() []OrderType {
-	return b.orders
+func (b simBroker) GetOrders() []int {
+	acct := simAccounts[int(b)]
+	return acct.orders
 }
 
-func (b *simBroker) GetPosition(sym string) (vPos PositionType) {
-	for _, v := range b.pos {
+func (b simBroker) GetPosition(sym string) (vPos PositionType) {
+	acct := simAccounts[int(b)]
+	for _, v := range acct.pos {
 		if v.Symbol == sym {
 			vPos = v
 			return
@@ -96,16 +129,17 @@ func (b *simBroker) GetPosition(sym string) (vPos PositionType) {
 	return
 }
 
-func (b *simBroker) GetPositions() []PositionType {
-	return b.pos
+func (b simBroker) GetPositions() []PositionType {
+	acct := simAccounts[int(b)]
+	return acct.pos
 }
 
-func (b *simBroker) TimeCurrent() DateTimeMs {
-	return b.current
+func (b simBroker) TimeCurrent() DateTimeMs {
+	return simCurrent
 }
 
-var simTrader = simBroker{}
+var simTrader simBroker
 
 func init() {
-	RegisterBroker("simBroker", &simTrader)
+	RegisterBroker("simBroker", simTrader)
 }

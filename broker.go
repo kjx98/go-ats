@@ -112,7 +112,7 @@ type Broker interface {
 	CancelOrder(oid int)                                                          // Cancel Order
 	CloseOrder(oId int)
 	GetOrder(oId int) *OrderType
-	GetOrders() []OrderType
+	GetOrders() []int
 	GetPosition(sym string) PositionType
 	GetPositions() []PositionType
 	TimeCurrent() DateTimeMs // return current time of broker server in millisecond timestamp

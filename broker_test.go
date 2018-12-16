@@ -34,7 +34,6 @@ func Test_OpenBroker(t *testing.T) {
 		ch   chan<- QuoteEvent
 	}
 	ch := make(chan QuoteEvent)
-	simTrader.evChan = ch
 	tests := []struct {
 		name    string
 		args    args
@@ -42,7 +41,7 @@ func Test_OpenBroker(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"openBroker1", args{"simBroker", ch}, &simTrader, false},
+		{"openBroker1", args{"simBroker", ch}, simTrader, false},
 		{"openBroker2", args{"simBroker2", ch}, nil, true},
 	}
 
