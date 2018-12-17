@@ -1,6 +1,7 @@
 package ats
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -34,6 +35,17 @@ var nOrders int
 var simOrders = []simOrderType{}
 var startTime, endTime timeT64
 var simCurrent DateTimeMs
+var simVmLock sync.RWMutex
+var simStatus int
+
+const (
+	VmIdle int = iota
+	VmStart
+	VmRunning
+	VmStoping
+)
+
+var vmStatusErr = errors.New("simBroker VM status error")
 
 type simBroker int
 
@@ -47,18 +59,48 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	return bb, nil
 }
 
+// every instance of VM should be with same configure
 func (b simBroker) Start(c Config) error {
 	// read Config, ...
 	// start goroutine for simulate/backtesting
+	switch simStatus {
+	case VmIdle:
+	case VmStart, VmRunning:
+		return nil
+	default:
+		return vmStatusErr
+	}
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
+	simStatus = VmStart
+	// load Bars
+	// build ticks
+	simStatus = VmRunning
 	return nil
 }
 
 func (b simBroker) Stop() error {
+	switch simStatus {
+	case VmIdle, VmStoping:
+		return nil
+	case VmRunning:
+	default:
+		return vmStatusErr
+	}
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
+	simStatus = VmStoping
+	// stop Bar feed
+	simStatus = VmIdle
 	return nil
 }
 
 func (b simBroker) SubscribeQuotes([]QuoteSubT) error {
+	if simStatus != VmIdle {
+		return vmStatusErr
+	}
 	// prepare Bars
+	// maybe Once load?
 	return nil
 }
 
@@ -83,33 +125,41 @@ func (b simBroker) FreeMargin() float64 {
 }
 
 func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int {
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
 	// tobe fix
+	// verify, put to orderbook
 	return 0
 }
 
 func (b simBroker) CancelOrder(oid int) {
-	acct := simAccounts[int(b)]
-	if oid >= len(acct.orders) {
+	//acct := simAccounts[int(b)]
+	if oid >= nOrders {
 		return
 	}
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
+	// remove order from orderbook
 }
 
 func (b simBroker) CloseOrder(oId int) {
-	acct := simAccounts[int(b)]
+	//acct := simAccounts[int(b)]
 	// if open, close with market
 	// if stoploss, remove stoploss, change to market
-	if oId >= len(acct.orders) {
+	if oId >= nOrders {
 		return
 	}
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
+	// if order open or partfill, changed to market order
 }
 
 func (b simBroker) GetOrder(oId int) *OrderType {
-	orderLock.RLock()
-	defer orderLock.RUnlock()
 	if oId >= nOrders {
 		return nil
 	}
-
+	orderLock.RLock()
+	defer orderLock.RUnlock()
 	return &simOrders[oId].OrderType
 }
 
@@ -134,6 +184,7 @@ func (b simBroker) GetPositions() []PositionType {
 	return acct.pos
 }
 
+//go:noinline
 func (b simBroker) TimeCurrent() DateTimeMs {
 	return simCurrent
 }
