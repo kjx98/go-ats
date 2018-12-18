@@ -3,6 +3,8 @@ package ats
 import (
 	"errors"
 	"sync"
+
+	"github.com/kjx98/avl"
 )
 
 type account struct {
@@ -24,7 +26,47 @@ type account struct {
 
 type simOrderType struct {
 	simBroker
+	oid   int
+	price int32
 	OrderType
+}
+
+type orderBook struct {
+	bids, asks *avl.Tree
+}
+
+func bidCompare(a, b interface{}) int {
+	ora, ok := a.(*simOrderType)
+	// maybe panic, if not simOrderType
+	if !ok {
+		return 0
+	}
+	orb, ok := b.(*simOrderType)
+	if !ok {
+		return 0
+	}
+	if ora.price == orb.price {
+		return ora.oid - orb.oid
+	}
+	// low price, low priority
+	return int(orb.price) - int(ora.price)
+}
+
+func askCompare(a, b interface{}) int {
+	ora, ok := a.(*simOrderType)
+	// maybe panic, if not simOrderType
+	if !ok {
+		return 0
+	}
+	orb, ok := b.(*simOrderType)
+	if !ok {
+		return 0
+	}
+	if ora.price == orb.price {
+		return ora.oid - orb.oid
+	}
+	// low price, low priority
+	return int(ora.price) - int(orb.price)
 }
 
 var acctLock sync.RWMutex
@@ -37,6 +79,12 @@ var startTime, endTime timeT64
 var simCurrent DateTimeMs
 var simVmLock sync.RWMutex
 var simStatus int
+
+// simSymbolQ symbol fKey map
+var simSymbolsQ = map[int]*Quotes{}
+
+// orderBook map with symbol key
+var simOrderBook map[string]orderBook
 
 const (
 	VmIdle int = iota
@@ -95,12 +143,24 @@ func (b simBroker) Stop() error {
 	return nil
 }
 
-func (b simBroker) SubscribeQuotes([]QuoteSubT) error {
+func (b simBroker) SubscribeQuotes(qq []QuoteSubT) error {
 	if simStatus != VmIdle {
 		return vmStatusErr
 	}
 	// prepare Bars
 	// maybe Once load?
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
+	// update QuotesPtr only not subscribed
+	for _, qs := range qq {
+		if si, err := GetSymbolInfo(qs.Symbol); err != nil {
+			continue
+		} else {
+			if _, ok := simSymbolsQ[si.fKey]; !ok {
+				simSymbolsQ[si.fKey] = qs.QuotesPtr
+			}
+		}
+	}
 	return nil
 }
 

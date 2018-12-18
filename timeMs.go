@@ -11,28 +11,27 @@ type DateTimeMs int64
 // returns the UTC Time corresponding to the given DateTimeMs time, sec
 //   seconds and nsec nanoseconds since January 1, 1970 UTC.
 func (dtMs DateTimeMs) Time() time.Time {
-	ns := int64(dtMs&0x3ff) * 1e6
-	sec := int64(dtMs >> 10)
+	ns := int64(dtMs%1000) * 1e6
+	sec := int64(dtMs / 1000)
 	return time.Unix(sec, ns)
 }
 
 // return seconds from 1970/1/1 UTC
 func (dtMs DateTimeMs) Unix() int64 {
-	return int64(dtMs >> 10)
+	return int64(dtMs / 1000)
 }
 
 func (dtMs DateTimeMs) Millisecond() int {
-	return int(dtMs & 0x3ff)
+	return int(dtMs % 1000)
 }
 
 func (t timeT64) DateTimeMs() DateTimeMs {
-	return DateTimeMs(int64(t) << 10)
+	return DateTimeMs(int64(t) * 1000)
 }
 
 // convert time.Time to DateTimeMs
 func TimeToDateTimeMs(dt time.Time) DateTimeMs {
-	sec := dt.Unix() << 10
+	sec := dt.Unix() * 1000
 	ms := dt.Nanosecond() / 1e6
-	//return DateTimeMs(sec | int64(ms&0x3ff))
-	return DateTimeMs(sec | int64(ms))
+	return DateTimeMs(sec + int64(ms))
 }

@@ -69,10 +69,18 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 				// process universe
 				universe = sc.contxt.GetStrings("Universe")
 				for _, sym := range universe {
+					if _, err := GetSymbolInfo(sym); err != nil {
+						newSymbolInfo(sym)
+						if _, err := GetSymbolInfo(sym); err != nil {
+							// can't buildSymbolInfo, skip
+							continue
+						}
+					}
 					if _, ok := sc.symStrat[sym]; ok {
 						// already has Strategy for symbol
 					} else {
 						sc.symStrat[sym] = ss
+
 					}
 				}
 			}

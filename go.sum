@@ -1,3 +1,5 @@
+github.com/kjx98/avl v0.0.0-20181218103930-a36da2df35fb h1:4XZPEE1axqFX4fblszcOsEgFNJ8J+I4hyb+wD3QU77Q=
+github.com/kjx98/avl v0.0.0-20181218103930-a36da2df35fb/go.mod h1:As8Xi6BUP0JMJLfFGsXAF2ZQJfe0QqwJjulARUNyySY=
 github.com/kjx98/golib v0.1.0 h1:O7C+MQ6dMTbSHNNQfusgUrILqORJ7NQY6xPB4adsyeo=
 github.com/kjx98/golib v0.1.0/go.mod h1:FGQfzmBIEYrqb6FwqHoyvegnZiijho2yEV4LG9Rwx5k=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=

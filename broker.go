@@ -8,10 +8,10 @@ import (
 type OrderDirT int32
 
 const (
-	OrderDirBuy   OrderDirT = 0
-	OrderDirSell  OrderDirT = 1
-	OrderDirCover OrderDirT = 2
-	OrderDirClose OrderDirT = 3
+	OrderDirBuy OrderDirT = iota
+	OrderDirSell
+	OrderDirCover
+	OrderDirClose
 )
 
 // Order Sign
@@ -44,12 +44,12 @@ func (orDir OrderDirT) String() string {
 type OrderStatusT int32
 
 const (
-	OrderNil        OrderStatusT = 0
-	OrderNew        OrderStatusT = 1
-	OrderAccept     OrderStatusT = 2
-	OrderPartFilled OrderStatusT = 3
-	OrderFilled     OrderStatusT = 4
-	OrderCanceled   OrderStatusT = 5
+	OrderNil OrderStatusT = iota
+	OrderNew
+	OrderAccept
+	OrderPartFilled
+	OrderFilled
+	OrderCanceled
 )
 
 func (oSt OrderStatusT) String() string {
