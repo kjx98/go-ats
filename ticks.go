@@ -10,6 +10,12 @@ type Tick struct {
 	Volume uint32
 }
 
+type TickFX struct {
+	Time DateTimeMs
+	Bid  int32
+	Ask  int32
+}
+
 type TickExt struct {
 	Time     timeT32
 	Bid      int32
@@ -31,6 +37,18 @@ type MinTA struct {
 	Volume  uint32
 	UpVol   uint32
 	DownVol uint32
+}
+
+type MinFX struct {
+	Time      timeT64
+	Open      int32
+	High      int32
+	Low       int32
+	Close     int32
+	Ticks     int32
+	Volume    float32
+	SpreadMin uint16
+	SpreadMax uint16
 }
 
 type MinTAExt struct {

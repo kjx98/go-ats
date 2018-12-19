@@ -2,7 +2,6 @@ package ats
 
 import (
 	"errors"
-	"fmt"
 	"unsafe"
 )
 
@@ -50,6 +49,12 @@ var errTickCount = errors.New("tick Count diff")
 var errBasePriceZero = errors.New("BasePrice is zero")
 var errBaseTimeZero = errors.New("Base Time is zero")
 var errCountZero = errors.New("TickHd.Count is zero")
+var errBufSizeLen = errors.New("Head BufSize != bufLen")
+var errTimeDelta = errors.New("Tick TimeDelta too large")
+var errMinPrice = errors.New("MinTA price too large")
+var errTickLast = errors.New("Tick lastDelta too large")
+var errTickBid = errors.New("Tick BidDelta too large")
+var errTickAsk = errors.New("Tick AskDelta too large")
 
 // (* TickHead) EncodeTick([]Tick) ([]byte, error)
 //	Encode/Compress Tick Slice to byte slice
@@ -97,7 +102,8 @@ func (tickHd *TickHead) EncodeTick(ticks []Tick) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(timeDelta))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick TimeDelta too large(%d)", timeDelta)
+			err = errTimeDelta
+
 			return
 		}
 		lastDelta := tickP.Last - tickHd.BaseP
@@ -110,7 +116,7 @@ func (tickHd *TickHead) EncodeTick(ticks []Tick) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(lastDelta))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick lastDelta too large(%d)", lastDelta)
+			err = errTickLast
 			return
 		}
 		switch {
@@ -186,7 +192,7 @@ func (tickHd *TickHead) EncodeTickExt(ticks []TickExt) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(timeDelta))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick TimeDelta too large(%d)", timeDelta)
+			err = errTimeDelta
 			return
 		}
 		lastDelta := tickP.Bid - tickHd.BaseP
@@ -207,7 +213,7 @@ func (tickHd *TickHead) EncodeTickExt(ticks []TickExt) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(tickP.Bid-tickP.BidDepth))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick BidDelta too large(%d)", lastDelta)
+			err = errTickBid
 			return
 		}
 		lastDelta = tickP.Ask - tickHd.BaseP
@@ -228,7 +234,7 @@ func (tickHd *TickHead) EncodeTickExt(ticks []TickExt) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(tickP.AskDepth-tickP.Ask))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick BidDelta too large(%d)", lastDelta)
+			err = errTickAsk
 			return
 		}
 
@@ -338,7 +344,7 @@ func (tickHd *TickHead) EncodeMinTA(mins []MinTA) (buf []byte, err error) {
 			putUint16(tmpBuf[off:], uint16(timeDelta))
 			off += 2
 		default:
-			err = fmt.Errorf("Tick TimeDelta too large(%d)", timeDelta)
+			err = errTimeDelta
 			return
 		}
 		lastDelta := tickP.High - tickHd.BaseP
@@ -383,7 +389,7 @@ func (tickHd *TickHead) EncodeMinTA(mins []MinTA) (buf []byte, err error) {
 				off += 2
 			}
 		default:
-			err = fmt.Errorf("MinTA price too large(%d)", lastDelta)
+			err = errMinPrice
 			return
 		}
 		switch {
@@ -440,7 +446,7 @@ func (tickHd *TickHead) DecodeTick(buf []byte) (ticks []Tick, err error) {
 		return
 	}
 	if bLen != int(tickHd.BufSize) {
-		err = fmt.Errorf("Head BufSize(%d) != bufLen(%d)", tickHd.BufSize, bLen)
+		err = errBufSizeLen
 		return
 	}
 	hdSize := int(unsafe.Sizeof(TickHead{}))
@@ -550,7 +556,7 @@ func (tickHd *TickHead) DecodeTickExt(buf []byte) (ticks []TickExt, err error) {
 		return
 	}
 	if bLen != int(tickHd.BufSize) {
-		err = fmt.Errorf("Head BufSize(%d) != bufLen(%d)", tickHd.BufSize, bLen)
+		err = errBufSizeLen
 		return
 	}
 	hdSize := int(unsafe.Sizeof(TickHead{}))
@@ -721,7 +727,7 @@ func (tickHd *TickHead) DecodeMinTA(buf []byte) (ticks []MinTA, err error) {
 		return
 	}
 	if bLen != int(tickHd.BufSize) {
-		err = fmt.Errorf("Head BufSize(%d) != bufLen(%d)", tickHd.BufSize, bLen)
+		err = errBufSizeLen
 		return
 	}
 	hdSize := int(unsafe.Sizeof(TickHead{}))

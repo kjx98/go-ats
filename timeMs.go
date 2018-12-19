@@ -13,12 +13,17 @@ type DateTimeMs int64
 func (dtMs DateTimeMs) Time() time.Time {
 	ns := int64(dtMs%1000) * 1e6
 	sec := int64(dtMs / 1000)
-	return time.Unix(sec, ns)
+	return time.Unix(sec, ns).UTC()
 }
 
 // return seconds from 1970/1/1 UTC
 func (dtMs DateTimeMs) Unix() int64 {
 	return int64(dtMs / 1000)
+}
+
+func (dtMs DateTimeMs) String() string {
+	tt := dtMs.Time()
+	return tt.Format("06-01-02 15:04:05.000")
 }
 
 func (dtMs DateTimeMs) Millisecond() int {

@@ -136,7 +136,7 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 		}
 	}
 	if len(sc.strats) == 0 {
-		err = errors.New("No active Strategy")
+		err = errNoActiveStrategy
 		return
 	}
 	// subscribe quotes
@@ -159,6 +159,7 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 
 var noEventChannel = errors.New("No Event Channel")
 var noStrategy = errors.New("No Strategy loaded")
+var errNoActiveStrategy = errors.New("No active Strategy")
 
 func (sc *strategyRunner) emitEvent(si *SymbolInfo, evId int) {
 	for _, strat := range sc.strats {
