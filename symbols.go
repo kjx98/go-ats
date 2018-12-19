@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -45,6 +45,8 @@ type symbolBase struct {
 	bMargin        bool
 }
 
+type SymbolKey int
+
 // SymbolInfo symbol traits of instrument
 // fKey link Bars/DayTA/MinTA etc, index from 1 .. count
 type SymbolInfo struct {
@@ -58,8 +60,8 @@ type SymbolInfo struct {
 }
 
 // fastKey for internal
-func (s *SymbolInfo) FastKey() int {
-	return s.fKey
+func (s *SymbolInfo) FastKey() SymbolKey {
+	return SymbolKey(s.fKey)
 }
 
 func (s *SymbolInfo) Digits() int {
@@ -307,13 +309,23 @@ var initTemp = symbolTemps{
 }
 
 var symInfos = map[string]*SymbolInfo{}
+var symInfoCaches = []SymbolInfo{}
 var usDeliverMonth = " FGHJKMNQUVXZ"
+var noSuchSymbol = errors.New("no such symbol")
 
 func GetSymbolInfo(sym string) (SymbolInfo, error) {
 	if res, ok := symInfos[sym]; ok {
 		return *res, nil
 	}
-	return SymbolInfo{}, errors.New("no such symbol")
+	return SymbolInfo{}, noSuchSymbol
+}
+
+func (fkey SymbolKey) SymbolInfo() (SymbolInfo, error) {
+	idx := int(fkey)
+	if idx < 0 || idx >= len(symInfoCaches) {
+		return SymbolInfo{}, noSuchSymbol
+	}
+	return symInfoCaches[idx], nil
 }
 
 var nInstruments int
@@ -402,17 +414,22 @@ func newSymbolInfo(sym string) {
 		}
 		instRWlock.Lock()
 		defer instRWlock.Unlock()
+
+		symIdx := nInstruments
 		nInstruments++
 		symInfo.fKey = nInstruments
-		symInfos[sym] = &symInfo
+
+		symInfoCaches = append(symInfoCaches, symInfo)
+		symInfos[sym] = &symInfoCaches[symIdx]
+		//symInfos[sym] = &symInfo
 		return
 	}
 }
 
-var symbolOnce sync.Once
+var symbolTempOnce sync.Once
 
 func initSymbols() {
-	symbolOnce.Do(func() {
+	symbolTempOnce.Do(func() {
 		if bb, err := ioutil.ReadFile("symbols.yml"); err == nil {
 			var symTemps map[string]symbolTemplate
 			if yaml.Unmarshal(bb, &symTemps) == nil {

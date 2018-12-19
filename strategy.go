@@ -27,7 +27,7 @@ type Strategyer interface {
 
 var stratExist = errors.New("Strategy registered")
 var stratNotExist = errors.New("Strategy not registered")
-var strats map[string]Strategyer = map[string]Strategyer{}
+var stratsMap map[string]Strategyer = map[string]Strategyer{}
 
 func (c *Context) stratGetBars(sym string, period Period) (*Bars, error) {
 	return getBars(sym, period, c.TimeCurrent())
@@ -41,15 +41,15 @@ func newContext(br Broker) *Context {
 
 // RegisterStrategy should be called from init()
 func RegisterStrategy(name string, inf Strategyer) error {
-	if _, ok := strats[name]; ok {
+	if _, ok := stratsMap[name]; ok {
 		return stratExist
 	}
-	strats[name] = inf
+	stratsMap[name] = inf
 	return nil
 }
 
 func loadStrategy(name string) (Strategyer, error) {
-	if b, ok := strats[name]; ok {
+	if b, ok := stratsMap[name]; ok {
 		return b, nil
 	}
 	return nil, brokerNotExist

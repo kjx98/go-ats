@@ -1,5 +1,7 @@
 package ats
 
+import "reflect"
+
 type Config map[string]interface{}
 
 func (c Config) Put(key string, v interface{}) {
@@ -8,8 +10,9 @@ func (c Config) Put(key string, v interface{}) {
 
 func (c Config) GetInt(key string, def int) int {
 	if r, ok := c[key]; ok {
-		if res, ok := r.(int); ok {
-			return res
+		switch r.(type) {
+		case int8, int16, int32, int, int64:
+			return int(reflect.ValueOf(r).Int())
 		}
 	}
 	return def

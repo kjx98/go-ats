@@ -13,7 +13,8 @@ import (
 
 type strategyRunner struct {
 	evChan   chan QuoteEvent
-	symStrat map[string]Strategyer
+	symStrat map[string]bool
+	strats   map[string]Strategyer
 	contxt   *Context
 }
 
@@ -39,14 +40,54 @@ func buildParam(c *ini.IniConfig, stratName string, param []Parameter) []float64
 	return res
 }
 
+func setParam(c Config, stratName string, param []Parameter) []float64 {
+	pLen := len(param)
+	if pLen == 0 {
+		return []float64{}
+	}
+	res := make([]float64, pLen)
+	for i, pp := range param {
+		switch pp.Value.(type) {
+		case int8, int16, int32, int64:
+			pVal := c.GetInt(pp.Name, int(reflect.ValueOf(pp.Value).Int()))
+			res[i] = float64(pVal)
+		case uint8, uint16, uint32, uint64:
+			pVal := c.GetInt(pp.Name, int(reflect.ValueOf(pp.Value).Uint()))
+			res[i] = float64(pVal)
+		case float32, float64:
+			pVal := c.GetFloat64(pp.Name, reflect.ValueOf(pp.Value).Float())
+			res[i] = pVal
+		}
+	}
+	return res
+}
+
 func newStrategyRunner() *strategyRunner {
 	var res strategyRunner
 	res.evChan = make(chan QuoteEvent, 10)
-	res.symStrat = map[string]Strategyer{}
+	res.symStrat = map[string]bool{}
+	res.strats = map[string]Strategyer{}
 	return &res
 }
 
+func (sc *strategyRunner) setStrategyParam(c Config) error {
+	for stName, b := range sc.strats {
+		params := setParam(c, stName, b.ParamSet())
+		sc.contxt.Put("Param", params)
+		if ss, err := b.Init(sc.contxt); err == nil {
+			sc.strats[stName] = ss
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
 func (sc *strategyRunner) loadStrategy(fname string) (err error) {
+	if len(sc.strats) != 0 {
+		// already load strategy
+		return
+	}
 	cf, err := ini.ParserConfig(fname, false)
 	if err != nil {
 		return
@@ -57,9 +98,13 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 		return
 	}
 	sc.contxt = newContext(br)
-	strats := strings.Split(cf.GetConfig("Config", "Strategy", ""), ",")
-	for _, stName := range strats {
-		if b, err := loadStrategy(stName); err == nil {
+	var autoNew bool
+	if cf.GetConfigInt("Config", "NewSymbolInfo", 0) != 0 {
+		autoNew = true
+	}
+	stratsN := strings.Split(cf.GetConfig("Config", "Strategy", ""), ",")
+	for _, stName := range stratsN {
+		if b, ok := stratsMap[stName]; ok {
 			universe := strings.Split(cf.GetConfig(stName, "Universe", ""), ",")
 			sc.contxt.Put("Universe", universe)
 			// build param for Strategy
@@ -67,26 +112,30 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 			sc.contxt.Put("Param", params)
 			if ss, err := b.Init(sc.contxt); err == nil {
 				// process universe
+				sc.strats[stName] = ss
 				universe = sc.contxt.GetStrings("Universe")
 				for _, sym := range universe {
 					if _, err := GetSymbolInfo(sym); err != nil {
-						newSymbolInfo(sym)
-						if _, err := GetSymbolInfo(sym); err != nil {
-							// can't buildSymbolInfo, skip
+						if autoNew {
+							newSymbolInfo(sym)
+							if _, err := GetSymbolInfo(sym); err != nil {
+								// can't buildSymbolInfo, skip
+								continue
+							}
+						} else {
 							continue
 						}
 					}
 					if _, ok := sc.symStrat[sym]; ok {
-						// already has Strategy for symbol
-					} else {
-						sc.symStrat[sym] = ss
-
+						// already
+						continue
 					}
+					sc.symStrat[sym] = true
 				}
 			}
 		}
 	}
-	if len(sc.symStrat) == 0 {
+	if len(sc.strats) == 0 {
 		err = errors.New("No active Strategy")
 		return
 	}
@@ -105,7 +154,6 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 		log.Println("Broker SubscribeQuotes", err)
 		return
 	}
-
 	return
 }
 
@@ -113,7 +161,7 @@ var noEventChannel = errors.New("No Event Channel")
 var noStrategy = errors.New("No Strategy loaded")
 
 func (sc *strategyRunner) emitEvent(si *SymbolInfo, evId int) {
-	if strat, ok := sc.symStrat[si.Ticker]; ok {
+	for _, strat := range sc.strats {
 		switch Period(evId) {
 		case 0:
 			strat.OnTick(si.Ticker)
@@ -129,7 +177,7 @@ func (sc *strategyRunner) runStrategy() error {
 	if sc.evChan == nil {
 		return noEventChannel
 	}
-	if len(sc.symStrat) == 0 {
+	if len(sc.strats) == 0 {
 		return noStrategy
 	}
 	sc.contxt.Broker.Start(sc.contxt.Config)
@@ -161,6 +209,10 @@ func (sc *strategyRunner) runStrategy() error {
 }
 
 func (sc *strategyRunner) stopStrategy() {
-	close(sc.evChan)
+	//for multiple running, never close evChan
+	//close(sc.evChan)
 	wg.Wait()
+	for _, ss := range sc.strats {
+		ss.DeInit()
+	}
 }

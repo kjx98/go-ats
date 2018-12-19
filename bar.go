@@ -37,8 +37,8 @@ const (
 
 // Bars struct for talib
 type Bars struct {
-	symKey  int32  // fastKey of symbol name
-	period  Period // time period in second
+	symKey  SymbolKey // fastKey of symbol name
+	period  Period    // time period in second
 	startDt timeT64
 	endDt   timeT64
 	Date    []timeT64
@@ -111,7 +111,7 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error
 		cnt := len(b.Date)
 		endDt = timeT64(int64(b.Date[cnt-1]) + int64(b.period))
 	}
-	b.symKey = int32(si.fKey)
+	b.symKey = SymbolKey(si.fKey)
 	b.period = period
 	b.startDt = startDt
 	b.endDt = endDt
