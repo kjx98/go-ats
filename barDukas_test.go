@@ -13,7 +13,7 @@ func Test_loadTickFX(t *testing.T) {
 		pair   string
 		startD julian.JulianDay
 	}
-	startT := julian.FromUint32(20170528)
+	startT := julian.FromUint32(20170521)
 	st1 := julian.FromUint32(20170529)
 	tests := []struct {
 		name       string
@@ -22,7 +22,7 @@ func Test_loadTickFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testEUR1", args{"EURUSD", startT}, 345365, false},
+		{"testEUR1", args{"EURUSD", startT}, 431095, false},
 		{"testEUR2", args{"EURUSD", st1}, 0, true},
 	}
 	if noDukasData {
@@ -52,7 +52,7 @@ func Test_loadMinFX(t *testing.T) {
 		pair   string
 		startD julian.JulianDay
 	}
-	startT := julian.FromUint32(20170528)
+	startT := julian.FromUint32(20170521)
 	st1 := julian.FromUint32(20170529)
 	tests := []struct {
 		name       string
@@ -61,7 +61,7 @@ func Test_loadMinFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testEUR1", args{"EURUSD", startT}, 7194, false},
+		{"testEUR1", args{"EURUSD", startT}, 7199, false},
 		{"testEUR2", args{"EURUSD", st1}, 0, true},
 	}
 	if noDukasData {
@@ -108,11 +108,14 @@ func TestLoadTickFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testLoadTick1", args{"EURUSD", st1, en1, 1000000}, 1015022, false},
+		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3150492, false},
+		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
 	}
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
+		tests[1].wantResLen = 0
+		tests[1].wantErr = true
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,12 +126,57 @@ func TestLoadTickFX(t *testing.T) {
 			}
 			if err == nil && len(gotRes) > 0 {
 				cnt := len(gotRes)
-				t.Log("Total minDT", cnt)
+				t.Log("Total tickDT", cnt)
 				t.Log("First Rec:", gotRes[0])
 				t.Log("Last Rec:", gotRes[cnt-1])
 			}
 			if !reflect.DeepEqual(len(gotRes), tt.wantResLen) {
 				t.Errorf("LoadTickFX() = %v, want %v", len(gotRes), tt.wantResLen)
+			}
+		})
+	}
+}
+
+func TestLoadMinFX(t *testing.T) {
+	type args struct {
+		pair   string
+		startD julian.JulianDay
+		endD   julian.JulianDay
+		cnt    int
+	}
+	st1 := julian.FromUint32(20170401)
+	en1 := julian.FromUint32(20171231)
+	tests := []struct {
+		name       string
+		args       args
+		wantResLen int
+		wantErr    bool
+	}{
+		// TODO: Add test cases.
+		{"testLoadMin1", args{"EURUSD", st1, 0, 60000}, 64685, false},
+		{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004620, false},
+	}
+	if noDukasData {
+		tests[0].wantResLen = 0
+		tests[0].wantErr = true
+		tests[1].wantResLen = 0
+		tests[1].wantErr = true
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRes, err := LoadMinFX(tt.args.pair, tt.args.startD, tt.args.endD, tt.args.cnt)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("LoadMinFX() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil && len(gotRes) > 0 {
+				cnt := len(gotRes)
+				t.Log("Total minDT", cnt)
+				t.Log("First Rec:", gotRes[0])
+				t.Log("Last Rec:", gotRes[cnt-1])
+			}
+			if !reflect.DeepEqual(len(gotRes), tt.wantResLen) {
+				t.Errorf("LoadMinFX() = %v, want %v", len(gotRes), tt.wantResLen)
 			}
 		})
 	}

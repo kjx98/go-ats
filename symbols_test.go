@@ -13,6 +13,14 @@ func TestInitSymbols(t *testing.T) {
 	}
 }
 
+func TestInitTicks(t *testing.T) {
+	initSymbols()
+	t.Log("initTicks")
+	for _, ti := range initTicks {
+		t.Log(ti)
+	}
+}
+
 func TestSymbolsFunc(t *testing.T) {
 	initSymbols()
 	newSymbolInfo("sh600600")
@@ -21,9 +29,9 @@ func TestSymbolsFunc(t *testing.T) {
 	newSymbolInfo("ESY8")
 	newSymbolInfo("GOOG")
 	newSymbolInfo("SPY")
-	newSymbolInfo("EURUSD")
-	newSymbolInfo("EURJPY")
-	newSymbolInfo("USDJPY")
+	//newSymbolInfo("EURUSD")
+	//newSymbolInfo("EURJPY")
+	//newSymbolInfo("USDJPY")
 	newSymbolInfo("BTCUSD")
 	t.Log("symInfos:")
 	for _, symP := range symInfos {

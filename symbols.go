@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"regexp"
 	"sort"
@@ -165,6 +166,7 @@ func (s *SymbolInfo) String() (res string) {
 	return
 }
 
+// symbol Template used for autoNew tickers
 type symbolTemplate struct {
 	TickerPrefix string `yaml:"ticker"`
 	Name         string
@@ -174,6 +176,14 @@ type symbolTemplate struct {
 	USticker     bool `yaml:"usTicker,omitempty"`
 	Bregexp      bool `yaml:"regexp,omitempty"`
 	exp          *regexp.Regexp
+}
+
+// TickStart, TickEnd only
+// Daily Data should used whole
+type tickConf struct {
+	symbol    string
+	TickStart uint32 `yaml:"start,omitempty"`
+	TickEnd   uint32 `yaml:"end,omitempty"`
 }
 
 var fDiv = [...]float64{100.0, 10.0, 1.0, 0.1, 0.01, 0.001, 0.0001,
@@ -312,6 +322,7 @@ var symInfos = map[string]*SymbolInfo{}
 var symInfoCaches = []SymbolInfo{}
 var usDeliverMonth = " FGHJKMNQUVXZ"
 var noSuchSymbol = errors.New("no such symbol")
+var initTicks = map[string]tickConf{}
 
 func GetSymbolInfo(sym string) (SymbolInfo, error) {
 	if res, ok := symInfos[sym]; ok {
@@ -432,7 +443,7 @@ func initSymbols() {
 	symbolTempOnce.Do(func() {
 		if bb, err := ioutil.ReadFile("symbols.yml"); err == nil {
 			var symTemps map[string]symbolTemplate
-			if yaml.Unmarshal(bb, &symTemps) == nil {
+			if err := yaml.Unmarshal(bb, &symTemps); err == nil {
 				initTemp = []symbolTemplate{}
 				for _, ss := range symTemps {
 					if ss.Bregexp {
@@ -442,10 +453,12 @@ func initSymbols() {
 					}
 					initTemp = append(initTemp, ss)
 				}
+			} else {
+				log.Println("Decode symbols.yml", err)
 			}
 		}
 		sort.Sort(initTemp)
-		// verify initTemp
+		// validate initTemp
 		for i := 0; i < len(initTemp); i++ {
 			if initTemp[i].Base.Margin <= 0 || initTemp[i].Base.Margin == 1.0 {
 				initTemp[i].Base.bMargin = false
@@ -458,7 +471,7 @@ func initSymbols() {
 			if initTemp[i].Base.PriceStep <= 0 {
 				initTemp[i].Base.PriceStep = 1
 			}
-			// digitMulti/digitDiv verify price/volume digits
+			// digitMulti/digitDiv validate price/volume digits
 			/*
 				if initTemp[i].Base.VolDigits > len(fMulti)-3 {
 					initTemp[i].Base.VolDigits = len(fMulti) - 3
@@ -467,6 +480,21 @@ func initSymbols() {
 					initTemp[i].Base.PriceDigits = len(fMulti) - 3
 				}
 			*/
+		}
+		if bb, err := ioutil.ReadFile("ticks.yml"); err == nil {
+			var symMap map[string]tickConf
+			if err := yaml.Unmarshal(bb, &symMap); err == nil {
+				for sym, ss := range symMap {
+					newSymbolInfo(sym)
+					//log.Println("Load Ticker", sym)
+					if _, err := GetSymbolInfo(sym); err == nil {
+						var ti = tickConf{sym, ss.TickStart, ss.TickEnd}
+						initTicks[sym] = ti
+					}
+				}
+			} else {
+				log.Println("Decode ticks.yml", err)
+			}
 		}
 	})
 }
