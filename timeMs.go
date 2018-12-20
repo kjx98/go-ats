@@ -2,6 +2,8 @@ package ats
 
 import (
 	"time"
+
+	"github.com/kjx98/golib/julian"
 )
 
 type DateTimeMs int64
@@ -39,4 +41,9 @@ func TimeToDateTimeMs(dt time.Time) DateTimeMs {
 	sec := dt.Unix() * 1000
 	ms := dt.Nanosecond() / 1e6
 	return DateTimeMs(sec + int64(ms))
+}
+
+func JulianToDateTimeMs(jDN julian.JulianDay) DateTimeMs {
+	sec := jDN.UTC().Unix() * 1000
+	return DateTimeMs(sec)
 }

@@ -69,7 +69,10 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 	return
 }
 
-func LoadTickFX(pair string, startD, endD julian.JulianDay, cnt int) (res []TickFX, err error) {
+// load DukasCopy forex tick data
+//		startD, endD		0 unlimit, or weekbase of date
+//		maxCnt				0 unlimit
+func LoadTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []TickFX, err error) {
 	if startD == 0 {
 		if tiC, ok := initTicks[pair]; ok {
 			startD = julian.FromUint32(tiC.TickStart)
@@ -94,7 +97,7 @@ func LoadTickFX(pair string, startD, endD julian.JulianDay, cnt int) (res []Tick
 		}
 		res = append(res, rec...)
 		tCnt += len(ticks)
-		if tCnt >= cnt {
+		if maxCnt != 0 && tCnt >= maxCnt {
 			break
 		}
 		startD += 7
@@ -134,7 +137,10 @@ func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 	return
 }
 
-func LoadMinFX(pair string, startD, endD julian.JulianDay, cnt int) (res []MinFX, err error) {
+// load DukasCopy forex Min1 data
+//		startD, endD		0 unlimit, or weekbase of date
+//		maxCnt				0 unlimit
+func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []MinFX, err error) {
 	if startD == 0 {
 		if tiC, ok := initTicks[pair]; ok {
 			startD = julian.FromUint32(tiC.TickStart)
@@ -155,7 +161,7 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, cnt int) (res []MinFX
 
 		res = append(res, mins...)
 		tCnt += len(mins)
-		if tCnt >= cnt {
+		if maxCnt != 0 && tCnt >= maxCnt {
 			break
 		}
 		startD += 7

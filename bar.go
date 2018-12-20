@@ -138,12 +138,17 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 	newBar.period = b.period
 	newBar.startDt = b.startDt
 	newBar.endDt = timeT64(lastT)
-	newBar.Date = b.Date[:cnt]
-	newBar.Open = b.Open[:cnt]
-	newBar.High = b.High[:cnt]
-	newBar.Low = b.Low[:cnt]
-	newBar.Close = b.Close[:cnt]
-	newBar.Volume = b.Volume[:cnt]
+	j := 0
+	if cnt > 512 {
+		// only lookback 512 Bars, maybe 1024 better
+		j = cnt - 512
+	}
+	newBar.Date = b.Date[j:cnt]
+	newBar.Open = b.Open[j:cnt]
+	newBar.High = b.High[j:cnt]
+	newBar.Low = b.Low[j:cnt]
+	newBar.Close = b.Close[j:cnt]
+	newBar.Volume = b.Volume[j:cnt]
 	return &newBar
 }
 
