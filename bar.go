@@ -66,7 +66,7 @@ var minBarsBase []*Bars
 
 // cache for Daily Base period Bars
 var dayBarsBase []*Bars
-var cacheBars map[int]*BarCache
+var cacheBars = map[int]*BarCache{}
 
 // using int for BarCacheHash
 func getBarCacheHash(fKey int, period Period) int {
@@ -115,7 +115,13 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error
 	b.period = period
 	b.startDt = startDt
 	b.endDt = endDt
-	dayBarsBase[si.fKey-1] = b
+	switch period {
+	case Min1, Min5:
+		minBarsBase[si.fKey-1] = b
+	case Daily:
+		dayBarsBase[si.fKey-1] = b
+	}
+
 	return nil
 }
 

@@ -36,6 +36,10 @@ func (t timeT64) DateTimeMs() DateTimeMs {
 	return DateTimeMs(int64(t) * 1000)
 }
 
+func (t timeT32) DateTimeMs() DateTimeMs {
+	return DateTimeMs(int64(t) * 1000)
+}
+
 // convert time.Time to DateTimeMs
 func TimeToDateTimeMs(dt time.Time) DateTimeMs {
 	sec := dt.Unix() * 1000

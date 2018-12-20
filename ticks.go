@@ -1,6 +1,8 @@
 package ats
 
 import (
+	"errors"
+
 	"github.com/kjx98/golib/julian"
 )
 
@@ -66,4 +68,86 @@ type DayTA struct {
 	Close    int32
 	Turnover float32
 	Volume   int64
+}
+
+type minBarFX struct {
+	sym    string
+	startT timeT64
+	endT   timeT64
+	dMulti float64
+	ta     []MinFX
+}
+
+func (mt *minBarFX) Len() int {
+	return len(mt.ta)
+}
+
+func (mt *minBarFX) Time(i int) timeT64 {
+	return mt.ta[i].Time
+}
+
+func (mt *minBarFX) Open(i int) float64 {
+	return float64(mt.ta[i].Open) * mt.dMulti
+}
+
+func (mt *minBarFX) High(i int) float64 {
+	return float64(mt.ta[i].High) * mt.dMulti
+}
+
+func (mt *minBarFX) Low(i int) float64 {
+	return float64(mt.ta[i].Low) * mt.dMulti
+}
+
+func (mt *minBarFX) Close(i int) float64 {
+	return float64(mt.ta[i].Close) * mt.dMulti
+}
+
+// FX no actual volume, using ticks instead
+func (mt *minBarFX) Volume(i int) float64 {
+	return float64(mt.ta[i].Ticks)
+}
+
+var errBarPeriod = errors.New("Invalid period for baseBar")
+
+type cacheBarType struct {
+	startD julian.JulianDay
+	endD   julian.JulianDay
+	res    []MinFX
+}
+
+var cacheMinBar = map[string]cacheBarType{}
+
+func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) error {
+	if period != Min1 {
+		return errBarPeriod
+	}
+	var mBar = minBarFX{sym: pair}
+	if si, err := GetSymbolInfo(pair); err != nil {
+		return err
+	} else {
+		mBar.dMulti = digitMulti(si.PriceDigits)
+	}
+	if cc, ok := cacheMinBar[pair]; ok && startD == cc.startD && endD == cc.endD {
+		mBar.ta = cc.res
+	} else {
+		if res, err := LoadMinFX(pair, startD, endD, 0); err != nil {
+			return err
+		} else {
+			mBar.ta = res
+			var cc = cacheBarType{startD, endD, res}
+			cacheMinBar[pair] = cc
+		}
+
+	}
+
+	mBar.startT = timeT64(startD.UTC().Unix())
+	mBar.endT = timeT64(endD.UTC().Unix())
+	var bars = Bars{period: period, startDt: mBar.startT, endDt: mBar.endT}
+	bars.Date = Dates(&mBar)
+	bars.Open = Opens(&mBar)
+	bars.High = Highs(&mBar)
+	bars.Low = Lows(&mBar)
+	bars.Close = Closes(&mBar)
+	bars.Volume = Volumes(&mBar)
+	return bars.loadBars(pair, period, mBar.startT, mBar.endT)
 }

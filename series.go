@@ -40,6 +40,18 @@ func NewSlice(s Series) (res []float64) {
 	return
 }
 
+func Dates(s TaSeries) (res []timeT64) {
+	if s.Len() <= 0 {
+		return
+	}
+	ll := s.Len()
+	res = make([]timeT64, ll)
+	for i := 0; i < ll; i++ {
+		res[i] = s.Time(i)
+	}
+	return
+}
+
 func Opens(s TaSeries) (res []float64) {
 	if s.Len() <= 0 {
 		return
