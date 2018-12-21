@@ -109,11 +109,11 @@ func TestLoadTickFX(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3150492, false},
-		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1171851, false},
-		//{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
+		//{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1171851, false},
+		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
 	}
 	// first tick 03-05-05 03:00:06.561@t440s, count 1171851
-	// while @t410, count 1173573
+	// while 03-05-05 01:00:00.495@t410, count 1173573
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
@@ -155,11 +155,11 @@ func TestLoadMinFX(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		{"testLoadMin1", args{"EURUSD", st1, 0, 60000}, 64685, false},
-		{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004500, false},
-		//{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004620, false},
+		//{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004500, false},
+		{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004620, false},
 	}
 	// first minDT 03-05-05 03:00:00 @t440s, count 1004500
-	// while @t410, count 1004620
+	// while 2003-05-05 01:00:00 @t410, count 1004620
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
