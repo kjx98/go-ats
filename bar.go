@@ -145,10 +145,13 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 	newBar.startDt = b.startDt
 	newBar.endDt = timeT64(lastT)
 	j := 0
-	if cnt > 512 {
-		// only lookback 512 Bars, maybe 1024 better
-		j = cnt - 512
-	}
+	//optimize for backtesting, limit lookback
+	/*
+		if cnt > 512 {
+			// only lookback 512 Bars, maybe 1024 better
+			j = cnt - 512
+		}
+	*/
 	newBar.Date = b.Date[j:cnt]
 	newBar.Open = b.Open[j:cnt]
 	newBar.High = b.High[j:cnt]

@@ -52,7 +52,7 @@ type SymbolKey int
 // fKey link Bars/DayTA/MinTA etc, index from 1 .. count
 type SymbolInfo struct {
 	Ticker string
-	symbolBase
+	*symbolBase
 	deliverMonth int
 	fKey         int
 	Upper        float64
@@ -342,6 +342,7 @@ func (fkey SymbolKey) SymbolInfo() (SymbolInfo, error) {
 
 var nInstruments int
 var instRWlock sync.RWMutex
+var jpySymbolBasePtr *symbolBase
 
 func newSymbolInfo(sym string) {
 	sLen := len(sym)
@@ -419,10 +420,15 @@ func newSymbolInfo(sym string) {
 		case 0:
 		}
 		symInfo.Ticker = sym
-		symInfo.symbolBase = initTemp[i].Base
+		symInfo.symbolBase = &initTemp[i].Base
 		if symInfo.IsForex && sym[3:] == "JPY" {
-			symInfo.PriceDigits = 3
-			symInfo.PriceStep = 0.001
+			if jpySymbolBasePtr == nil {
+				jpyBase := initTemp[i].Base
+				jpySymbolBasePtr = &jpyBase
+				jpyBase.PriceDigits = 3
+				jpyBase.PriceStep = 0.001
+			}
+			symInfo.symbolBase = jpySymbolBasePtr
 		}
 		instRWlock.Lock()
 		defer instRWlock.Unlock()

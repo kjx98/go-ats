@@ -13,8 +13,8 @@ func TestLoadBarFX(t *testing.T) {
 		startD julian.JulianDay
 		endD   julian.JulianDay
 	}
-	st1 := julian.FromUint32(20170401)
-	en1 := julian.FromUint32(20171231)
+	st1 := julian.FromUint32(20160103)
+	en1 := julian.FromUint32(20170603)
 	tests := []struct {
 		name    string
 		args    args
@@ -31,7 +31,7 @@ func TestLoadBarFX(t *testing.T) {
 			if err := LoadBarFX(tt.args.pair, tt.args.period, tt.args.startD, tt.args.endD); (err != nil) != tt.wantErr {
 				t.Errorf("LoadBarFX() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if cc, ok := cacheMinBar["EURUSD"]; ok {
+			if cc, ok := cacheMinFX["EURUSD"]; ok {
 				t.Logf("MinBar start: %d, end: %d, length: %d\n", cc.startD.Uint32(), cc.endD.Uint32(), len(cc.res))
 				var ccTimeMs DateTimeMs
 				if cnt := len(cc.res); cnt > 0 {

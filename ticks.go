@@ -71,7 +71,7 @@ type DayTA struct {
 }
 
 type minBarFX struct {
-	sym    string
+	period Period
 	startT timeT64
 	endT   timeT64
 	fMulti float64
@@ -108,36 +108,74 @@ func (mt *minBarFX) Volume(i int) float64 {
 	return float64(mt.ta[i].Ticks)
 }
 
+type minBarTA struct {
+	period Period
+	startT timeT64
+	endT   timeT64
+	fMulti float64
+	fDiv   float64
+	ta     []MinTA
+}
+
+func (mt *minBarTA) Len() int {
+	return len(mt.ta)
+}
+
+func (mt *minBarTA) Time(i int) timeT64 {
+	return timeT64(mt.ta[i].Time)
+}
+
+func (mt *minBarTA) Open(i int) float64 {
+	return float64(mt.ta[i].Open) * mt.fDiv
+}
+
+func (mt *minBarTA) High(i int) float64 {
+	return float64(mt.ta[i].High) * mt.fDiv
+}
+
+func (mt *minBarTA) Low(i int) float64 {
+	return float64(mt.ta[i].Low) * mt.fDiv
+}
+
+func (mt *minBarTA) Close(i int) float64 {
+	return float64(mt.ta[i].Close) * mt.fDiv
+}
+
+func (mt *minBarTA) Volume(i int) float64 {
+	return float64(mt.ta[i].Volume)
+}
+
 var errBarPeriod = errors.New("Invalid period for baseBar")
 
-type cacheBarType struct {
+type cacheMinBarFX struct {
+	period Period
 	startD julian.JulianDay
 	endD   julian.JulianDay
 	res    []MinFX
 }
 
-var cacheMinBar = map[string]cacheBarType{}
+var cacheMinFX = map[string]cacheMinBarFX{}
 
 func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) error {
 	if period != Min1 {
 		return errBarPeriod
 	}
-	var mBar = minBarFX{sym: pair}
+	var mBar = minBarFX{period: period}
 	if si, err := GetSymbolInfo(pair); err != nil {
 		return err
 	} else {
 		mBar.fMulti = digitMulti(si.PriceDigits)
 		mBar.fDiv = digitDiv(si.PriceDigits)
 	}
-	if cc, ok := cacheMinBar[pair]; ok && startD == cc.startD && endD == cc.endD {
+	if cc, ok := cacheMinFX[pair]; ok && startD == cc.startD && endD == cc.endD {
 		mBar.ta = cc.res
 	} else {
 		if res, err := LoadMinFX(pair, startD, endD, 0); err != nil {
 			return err
 		} else {
 			mBar.ta = res
-			var cc = cacheBarType{startD, endD, res}
-			cacheMinBar[pair] = cc
+			var cc = cacheMinBarFX{period, startD, endD, res}
+			cacheMinFX[pair] = cc
 		}
 
 	}

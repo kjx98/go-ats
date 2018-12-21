@@ -99,7 +99,7 @@ func TestLoadTickFX(t *testing.T) {
 		endD   julian.JulianDay
 		cnt    int
 	}
-	st1 := julian.FromUint32(20170401)
+	st1 := julian.FromUint32(20170403)
 	en1 := julian.FromUint32(20171231)
 	tests := []struct {
 		name       string
@@ -108,7 +108,7 @@ func TestLoadTickFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3150492, false},
+		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3113157, false},
 		//{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1171851, false},
 		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
 	}

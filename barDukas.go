@@ -79,6 +79,7 @@ func LoadTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []T
 			log.Println("LoadTickFX: startDate 0, replace to ", startD)
 		}
 	}
+	startT := JulianToDateTimeMs(startD)
 	startD = startD.Weekbase()
 	tCnt := 0
 	var ticks []tickDT
@@ -91,12 +92,24 @@ func LoadTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []T
 			return
 		}
 		tiCnt := len(ticks)
-		rec := make([]TickFX, tiCnt)
-		for i := 0; i < tiCnt; i++ {
-			rec[i].Time, rec[i].Bid, rec[i].Ask = ticks[i].Time, ticks[i].Bid, ticks[i].Ask
+		if ticks[0].Time < startT {
+			for i := 0; i < tiCnt; i++ {
+				if ticks[i].Time < startT {
+					continue
+				}
+				var rec TickFX
+				rec.Time, rec.Bid, rec.Ask = ticks[i].Time, ticks[i].Bid, ticks[i].Ask
+				res = append(res, rec)
+				tCnt++
+			}
+		} else {
+			rec := make([]TickFX, tiCnt)
+			for i := 0; i < tiCnt; i++ {
+				rec[i].Time, rec[i].Bid, rec[i].Ask = ticks[i].Time, ticks[i].Bid, ticks[i].Ask
+			}
+			res = append(res, rec...)
+			tCnt += len(ticks)
 		}
-		res = append(res, rec...)
-		tCnt += len(ticks)
 		if maxCnt != 0 && tCnt >= maxCnt {
 			break
 		}
