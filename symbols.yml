@@ -129,7 +129,7 @@ ES:
     usTicker: true
 
 EUR:
-    ticker: 'EUR[A-Z]{3}'
+    ticker: EUR
     name: EURO Forex
     base:
         market: FX
@@ -145,7 +145,6 @@ EUR:
         commissionRate: 0.1
         commisssionType: 1
     tickerLen: 6
-    regexp: true
 
 USD:
     ticker: '[A-Z]{3}USD|USD[A-Z]{3}'
@@ -196,6 +195,24 @@ XAU:
         digits: 2
         volumeDigits: 2
         lotSize: 100
+        margin: 0.02
+        forex: true
+        commissionRate: 0.5
+        commisssionType: 1
+    tickerLen: 6
+
+XAG:
+    ticker: XAG
+    name: Silver /USD Forex
+    base:
+        market: FX
+        volumeMin: 1
+        volumeMax: 10000
+        volumeStep: 1
+        priceStep: 0.001
+        digits: 3
+        volumeDigits: 2
+        lotSize: 1000
         margin: 0.02
         forex: true
         commissionRate: 0.5

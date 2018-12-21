@@ -52,7 +52,7 @@ type SymbolKey int
 // fKey link Bars/DayTA/MinTA etc, index from 1 .. count
 type SymbolInfo struct {
 	Ticker string
-	*symbolBase
+	symbolBase
 	deliverMonth int
 	fKey         int
 	Upper        float64
@@ -228,14 +228,15 @@ func (t *symbolTemplate) String() (res string) {
 		volMin := float64(t.Base.VolMin) * mm
 		volMax := float64(t.Base.VolMax) * mm
 		volStep := float64(t.Base.VolStep) * mm
-		res = fmt.Sprintf("%s@%s Vol(%.*f/%.*f)(%.*f) PrcStep(%.*f) %s %d %d",
+		res = fmt.Sprintf("%s@%s Vol(%.*f/%.*f)(%.*f) PrcStep(%d,%.*f) %s %d %d",
 			t.TickerPrefix, t.Base.Market, vd, volMin, vd, volMax, vd, volStep,
-			t.Base.PriceDigits, t.Base.PriceStep, margin, t.TickerLen, t.DateLen)
+			t.Base.PriceDigits, t.Base.PriceDigits, t.Base.PriceStep, margin,
+			t.TickerLen, t.DateLen)
 	} else {
-		res = fmt.Sprintf("%s@%s Vol(%d/%d)(%d) PrcStep(%.*f) %s %d %d",
+		res = fmt.Sprintf("%s@%s Vol(%d/%d)(%d) PrcStep(%d,%.*f) %s %d %d",
 			t.TickerPrefix, t.Base.Market, t.Base.VolMin, t.Base.VolMax,
-			t.Base.VolStep, t.Base.PriceDigits, t.Base.PriceStep,
-			margin, t.TickerLen, t.DateLen)
+			t.Base.VolStep, t.Base.PriceDigits, t.Base.PriceDigits,
+			t.Base.PriceStep, margin, t.TickerLen, t.DateLen)
 	}
 	return
 }
@@ -418,7 +419,7 @@ func newSymbolInfo(sym string) {
 		case 0:
 		}
 		symInfo.Ticker = sym
-		symInfo.symbolBase = &initTemp[i].Base
+		symInfo.symbolBase = initTemp[i].Base
 		if symInfo.IsForex && sym[3:] == "JPY" {
 			symInfo.PriceDigits = 3
 			symInfo.PriceStep = 0.001

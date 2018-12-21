@@ -74,7 +74,8 @@ type minBarFX struct {
 	sym    string
 	startT timeT64
 	endT   timeT64
-	dMulti float64
+	fMulti float64
+	fDiv   float64
 	ta     []MinFX
 }
 
@@ -87,19 +88,19 @@ func (mt *minBarFX) Time(i int) timeT64 {
 }
 
 func (mt *minBarFX) Open(i int) float64 {
-	return float64(mt.ta[i].Open) * mt.dMulti
+	return float64(mt.ta[i].Open) * mt.fDiv
 }
 
 func (mt *minBarFX) High(i int) float64 {
-	return float64(mt.ta[i].High) * mt.dMulti
+	return float64(mt.ta[i].High) * mt.fDiv
 }
 
 func (mt *minBarFX) Low(i int) float64 {
-	return float64(mt.ta[i].Low) * mt.dMulti
+	return float64(mt.ta[i].Low) * mt.fDiv
 }
 
 func (mt *minBarFX) Close(i int) float64 {
-	return float64(mt.ta[i].Close) * mt.dMulti
+	return float64(mt.ta[i].Close) * mt.fDiv
 }
 
 // FX no actual volume, using ticks instead
@@ -125,7 +126,8 @@ func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) error 
 	if si, err := GetSymbolInfo(pair); err != nil {
 		return err
 	} else {
-		mBar.dMulti = digitMulti(si.PriceDigits)
+		mBar.fMulti = digitMulti(si.PriceDigits)
+		mBar.fDiv = digitDiv(si.PriceDigits)
 	}
 	if cc, ok := cacheMinBar[pair]; ok && startD == cc.startD && endD == cc.endD {
 		mBar.ta = cc.res
