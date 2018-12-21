@@ -23,6 +23,9 @@ func TestLoadBarFX(t *testing.T) {
 		// TODO: Add test cases.
 		{"LoadBarFX-EUR", args{"EURUSD", Min1, st1, en1}, false},
 	}
+	if noDukasData {
+		tests[0].wantErr = true
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := LoadBarFX(tt.args.pair, tt.args.period, tt.args.startD, tt.args.endD); (err != nil) != tt.wantErr {

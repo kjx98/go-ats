@@ -117,6 +117,8 @@ func TestLoadTickFX(t *testing.T) {
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
+		tests[1].wantResLen = 0
+		tests[1].wantErr = true
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -163,6 +165,8 @@ func TestLoadMinFX(t *testing.T) {
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
+		tests[1].wantResLen = 0
+		tests[1].wantErr = true
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
