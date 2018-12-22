@@ -2,6 +2,7 @@ package ats
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -68,6 +69,63 @@ var minBarsBase []*Bars
 var dayBarsBase []*Bars
 var cacheBars = map[int]*BarCache{}
 
+func (per Period) String() string {
+	switch per {
+	case Min1:
+		return "Min1"
+	case Min3:
+		return "Min3"
+	case Min5:
+		return "Min5"
+	case Min15:
+		return "Min15"
+	case Min30:
+		return "Min30"
+	case Hour1:
+		return "Hour1"
+	case Hour2:
+		return "Hour2"
+	case Hour4:
+		return "Hour4"
+	case Hour8:
+		return "Hour8"
+	case Daily:
+		return "Daily"
+	case Weekly:
+		return "Weekly"
+	case Monthly:
+		return "Monthly"
+	}
+	return "Inv Period"
+}
+
+func (b *Bars) String() string {
+	si, err := b.symKey.SymbolInfo()
+	if err != nil {
+		return fmt.Sprintf("Bars with error symKey: %s", err)
+	}
+	return fmt.Sprintf("%s, period %s, start: %s, end: %s, Total: %d", si.Ticker, b.period.String(),
+		b.startDt.String(), b.endDt.String(), len(b.Date))
+}
+
+func (b *Bars) RowString(idx int) string {
+	if idx < 0 || idx >= len(b.Date) {
+		return "OOB idx"
+	}
+	si, err := b.symKey.SymbolInfo()
+	if err != nil {
+		return fmt.Sprintf("Bars with error symKey: %s", err)
+	}
+	dig := si.Digits()
+	if dig <= 0 {
+		return fmt.Sprintf("%s %d/%d/%d/%d %d", b.Date[idx].String(), int(b.Open[idx]),
+			int(b.High[idx]), int(b.Low[idx]), int(b.Close[idx]), int(b.Volume[idx]))
+	}
+	return fmt.Sprintf("%s %.*f/%.*f/%.*f/%.*f %d", b.Date[idx].String(), dig,
+		b.Open[idx], dig, b.High[idx], dig, b.Low[idx], dig, b.Close[idx],
+		int(b.Volume[idx]))
+}
+
 // using int for BarCacheHash
 func getBarCacheHash(fKey int, period Period) int {
 	return (fKey << 16) | (int(period) & 0xffff)
@@ -78,7 +136,7 @@ func getBarCacheHash(fKey int, period Period) int {
 //	Daily for daily/weekly/monthly
 func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error {
 	si, err := GetSymbolInfo(sym)
-	if err != nil || si.fKey <= 0 {
+	if err != nil || si.fKey != int(b.symKey) {
 		return invalidSymbol
 	}
 	if len(b.Date) == 0 {
@@ -140,7 +198,7 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 		}
 		cnt--
 	}
-	var newBar = Bars{}
+	var newBar = Bars{symKey: b.symKey}
 	newBar.period = b.period
 	newBar.startDt = b.startDt
 	newBar.endDt = timeT64(lastT)
@@ -290,7 +348,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 		fallthrough
 	case Weekly:
 		cnt := len(b.Open)
-		res = &Bars{}
+		res = &Bars{symKey: b.symKey}
 		res.period = newPeriod
 		for i := 0; i < cnt; i++ {
 			if int64(b.Date[i]) >= vDate+int64(newPeriod) {

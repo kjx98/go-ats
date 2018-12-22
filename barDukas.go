@@ -150,6 +150,20 @@ func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 	return
 }
 
+type cacheMinDukasType struct {
+	startD julian.JulianDay
+	endD   julian.JulianDay
+	res    []MinFX
+}
+
+var cacheMinDukas = map[string]cacheMinDukasType{}
+var cacheDukasHits int
+var cacheDukasMiss int
+
+func DukasCacheStatus() string {
+	return fmt.Sprintf("DukasCache Status: Hits %d, Miss: %d", cacheDukasHits, cacheDukasMiss)
+}
+
 // load DukasCopy forex Min1 data
 //		startD, endD		0 unlimit, or weekbase of date
 //		maxCnt				0 unlimit
@@ -161,6 +175,17 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 		}
 	}
 	startD = startD.Weekbase()
+	if cc, ok := cacheMinDukas[pair]; ok {
+		if startD == cc.startD && endD == cc.endD {
+			res = cc.res
+			cacheDukasHits++
+			return
+		} else {
+			cacheDukasMiss++
+		}
+	}
+	var cc = cacheMinDukasType{startD: startD, endD: endD}
+
 	tCnt := 0
 	var mins []minDT
 	for endD == 0 || startD < endD {
@@ -179,5 +204,7 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 		}
 		startD += 7
 	}
+	cc.res = res
+	cacheMinDukas[pair] = cc
 	return
 }

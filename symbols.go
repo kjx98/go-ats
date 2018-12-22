@@ -334,10 +334,10 @@ func GetSymbolInfo(sym string) (SymbolInfo, error) {
 
 func (fkey SymbolKey) SymbolInfo() (SymbolInfo, error) {
 	idx := int(fkey)
-	if idx < 0 || idx >= len(symInfoCaches) {
+	if idx <= 0 || idx > len(symInfoCaches) {
 		return SymbolInfo{}, noSuchSymbol
 	}
-	return symInfoCaches[idx], nil
+	return symInfoCaches[idx-1], nil
 }
 
 var nInstruments int

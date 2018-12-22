@@ -147,8 +147,8 @@ func TestLoadMinFX(t *testing.T) {
 		endD   julian.JulianDay
 		cnt    int
 	}
-	st1 := julian.FromUint32(20170401)
-	en1 := julian.FromUint32(20171231)
+	st1 := julian.FromUint32(20160103)
+	en1 := julian.FromUint32(20170603)
 	tests := []struct {
 		name       string
 		args       args
@@ -156,17 +156,26 @@ func TestLoadMinFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testLoadMin1", args{"EURUSD", st1, 0, 60000}, 64685, false},
-		//{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004500, false},
+		{"testLoadMin1", args{"EURUSD", st1, 0, 60000}, 64786, false},
 		{"testLoadMin2", args{"EURUSD", 0, en1, 1000000}, 1004620, false},
+		{"testLoadMin3", args{"EURUSD", st1, en1, 0}, 531999, false},
+		{"testLoadMin4", args{"GBPUSD", st1, en1, 0}, 532320, false},
+		{"testLoadMin5", args{"USDJPY", st1, en1, 0}, 531563, false},
+		{"testLoadMin6", args{"XAUUSD", st1, en1, 0}, 502411, false},
 	}
-	// first minDT 03-05-05 03:00:00 @t440s, count 1004500
-	// while 2003-05-05 01:00:00 @t410, count 1004620
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
 		tests[1].wantResLen = 0
 		tests[1].wantErr = true
+		tests[2].wantResLen = 0
+		tests[2].wantErr = true
+		tests[3].wantResLen = 0
+		tests[3].wantErr = true
+		tests[4].wantResLen = 0
+		tests[4].wantErr = true
+		tests[5].wantResLen = 0
+		tests[5].wantErr = true
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -186,4 +195,5 @@ func TestLoadMinFX(t *testing.T) {
 			}
 		})
 	}
+	t.Log(DukasCacheStatus())
 }

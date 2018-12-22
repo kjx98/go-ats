@@ -71,7 +71,6 @@ type DayTA struct {
 }
 
 type minBarFX struct {
-	period Period
 	startT timeT64
 	endT   timeT64
 	fMulti float64
@@ -109,9 +108,9 @@ func (mt *minBarFX) Volume(i int) float64 {
 }
 
 type minBarTA struct {
-	period Period
-	startT timeT64
-	endT   timeT64
+	//period Period
+	//startT timeT64
+	//endT   timeT64
 	fMulti float64
 	fDiv   float64
 	ta     []MinTA
@@ -147,42 +146,30 @@ func (mt *minBarTA) Volume(i int) float64 {
 
 var errBarPeriod = errors.New("Invalid period for baseBar")
 
-type cacheMinBarFX struct {
-	period Period
-	startD julian.JulianDay
-	endD   julian.JulianDay
-	res    []MinFX
-}
-
-var cacheMinFX = map[string]cacheMinBarFX{}
-
-func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) error {
+func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err error) {
 	if period != Min1 {
 		return errBarPeriod
 	}
-	var mBar = minBarFX{period: period}
+	var mBar = minBarFX{}
+	var fKey SymbolKey
 	if si, err := GetSymbolInfo(pair); err != nil {
 		return err
 	} else {
+		fKey = SymbolKey(si.fKey)
 		mBar.fMulti = digitMulti(si.PriceDigits)
 		mBar.fDiv = digitDiv(si.PriceDigits)
 	}
-	if cc, ok := cacheMinFX[pair]; ok && startD == cc.startD && endD == cc.endD {
-		mBar.ta = cc.res
-	} else {
-		if res, err := LoadMinFX(pair, startD, endD, 0); err != nil {
-			return err
-		} else {
-			mBar.ta = res
-			var cc = cacheMinBarFX{period, startD, endD, res}
-			cacheMinFX[pair] = cc
-		}
-
+	mBar.ta, err = LoadMinFX(pair, startD, endD, 0)
+	if err != nil {
+		return
 	}
 
-	mBar.startT = timeT64(startD.UTC().Unix())
-	mBar.endT = timeT64(endD.UTC().Unix())
-	var bars = Bars{period: period, startDt: mBar.startT, endDt: mBar.endT}
+	startT := timeT64(startD.UTC().Unix())
+	// end daily, to nextday minus 1 second
+	endD++
+	endT := timeT64(endD.UTC().Unix())
+	endT--
+	var bars = Bars{symKey: fKey, period: period, startDt: startT, endDt: endT}
 	bars.Date = Dates(&mBar)
 	bars.Open = Opens(&mBar)
 	bars.High = Highs(&mBar)

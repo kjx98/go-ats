@@ -192,7 +192,7 @@ XAU:
         volumeMax: 10000
         volumeStep: 1
         priceStep: 0.01
-        digits: 2
+        digits: 3
         volumeDigits: 2
         lotSize: 100
         margin: 0.02
