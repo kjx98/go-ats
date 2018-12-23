@@ -3,6 +3,7 @@ package ats
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/kjx98/avl"
 )
@@ -78,7 +79,12 @@ var simOrders = []simOrderType{}
 var startTime, endTime timeT64
 var simCurrent DateTimeMs
 var simVmLock sync.RWMutex
-var simStatus int
+
+// simStatus should be atomic
+var simStatus int32
+var maxAllocHeap uint64
+var maxSysHeap uint64
+var timeAtMaxAlloc DateTimeMs
 
 // simSymbolQ symbol fKey map
 var simSymbolsQ = map[int]*Quotes{}
@@ -87,7 +93,7 @@ var simSymbolsQ = map[int]*Quotes{}
 var simOrderBook map[string]orderBook
 
 const (
-	VmIdle int = iota
+	VmIdle int32 = iota
 	VmStart
 	VmRunning
 	VmStoping
@@ -111,7 +117,7 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 func (b simBroker) Start(c Config) error {
 	// read Config, ...
 	// start goroutine for simulate/backtesting
-	switch simStatus {
+	switch atomic.LoadInt32(&simStatus) {
 	case VmIdle:
 	case VmStart, VmRunning:
 		return nil
@@ -120,15 +126,18 @@ func (b simBroker) Start(c Config) error {
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
-	simStatus = VmStart
+	maxAllocHeap = 0
+	maxSysHeap = 0
+	timeAtMaxAlloc = 0
+	atomic.StoreInt32(&simStatus, VmStart)
 	// load Bars
 	// build ticks
-	simStatus = VmRunning
+	atomic.StoreInt32(&simStatus, VmRunning)
 	return nil
 }
 
 func (b simBroker) Stop() error {
-	switch simStatus {
+	switch atomic.LoadInt32(&simStatus) {
 	case VmIdle, VmStoping:
 		return nil
 	case VmRunning:
@@ -137,14 +146,14 @@ func (b simBroker) Stop() error {
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
-	simStatus = VmStoping
+	atomic.StoreInt32(&simStatus, VmStoping)
 	// stop Bar feed
-	simStatus = VmIdle
+	atomic.StoreInt32(&simStatus, VmIdle)
 	return nil
 }
 
 func (b simBroker) SubscribeQuotes(qq []QuoteSubT) error {
-	if simStatus != VmIdle {
+	if atomic.LoadInt32(&simStatus) != VmIdle {
 		return vmStatusErr
 	}
 	// prepare Bars
