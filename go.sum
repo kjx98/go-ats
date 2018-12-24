@@ -1,3 +1,5 @@
+github.com/go-sql-driver/mysql v1.4.1 h1:g24URVg0OFbNUTx9qqY1IRZ9D9z3iPyi5zKhQZpNwpA=
+github.com/go-sql-driver/mysql v1.4.1/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/kjx98/avl v0.1.0 h1:UfuXIE/5kQvBOC5aZHd1/ZTq/7bsTql2gVe6btQ6Rxo=
 github.com/kjx98/avl v0.1.0/go.mod h1:As8Xi6BUP0JMJLfFGsXAF2ZQJfe0QqwJjulARUNyySY=
 github.com/kjx98/golib v0.1.2 h1:vdMFYYnLK+B1dgwX/GHTHTaHjbmCO7mTL+j7od58cEM=
