@@ -100,7 +100,7 @@ func TestLoadTickFX(t *testing.T) {
 		cnt    int
 	}
 	st1 := julian.FromUint32(20170403)
-	en1 := julian.FromUint32(20171231)
+	en1 := julian.FromUint32(20170601)
 	tests := []struct {
 		name       string
 		args       args
@@ -112,6 +112,7 @@ func TestLoadTickFX(t *testing.T) {
 		//{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1171851, false},
 		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
 	}
+	// fixed rerun cvtDukas3@t410
 	// first tick 03-05-05 03:00:06.561@t440s, count 1171851
 	// while 03-05-05 01:00:00.495@t410, count 1173573
 	if noDukasData {
@@ -148,7 +149,7 @@ func TestLoadMinFX(t *testing.T) {
 		cnt    int
 	}
 	st1 := julian.FromUint32(20160103)
-	en1 := julian.FromUint32(20170603)
+	en1 := julian.FromUint32(20170601)
 	tests := []struct {
 		name       string
 		args       args
@@ -163,6 +164,7 @@ func TestLoadMinFX(t *testing.T) {
 		{"testLoadMin5", args{"USDJPY", st1, en1, 0}, 531563, false},
 		{"testLoadMin6", args{"XAUUSD", st1, en1, 0}, 502411, false},
 	}
+	// fixed, rurun cvtDukas @t410
 	if noDukasData {
 		tests[0].wantResLen = 0
 		tests[0].wantErr = true
