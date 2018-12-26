@@ -102,6 +102,9 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 	if cf.GetConfigInt("Config", "NewSymbolInfo", 0) != 0 {
 		autoNew = true
 	}
+	if cf.GetConfigInt("Config", "RunTick", 0) != 0 {
+		sc.contxt.Put("RunTick", 1)
+	}
 	stratsN := strings.Split(cf.GetConfig("Config", "Strategy", ""), ",")
 	for _, stName := range stratsN {
 		if b, ok := stratsMap[stName]; ok {

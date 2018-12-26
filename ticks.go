@@ -82,35 +82,17 @@ func (mt *minBarFX) Len() int {
 	return len(mt.ta)
 }
 
-func (mt *minBarFX) Time(i int) timeT64 {
-	return mt.ta[i].Time
-}
-
-func (mt *minBarFX) Open(i int) float64 {
-	return float64(mt.ta[i].Open) * mt.fDiv
-}
-
-func (mt *minBarFX) High(i int) float64 {
-	return float64(mt.ta[i].High) * mt.fDiv
-}
-
-func (mt *minBarFX) Low(i int) float64 {
-	return float64(mt.ta[i].Low) * mt.fDiv
-}
-
-func (mt *minBarFX) Close(i int) float64 {
-	return float64(mt.ta[i].Close) * mt.fDiv
-}
-
-// FX no actual volume, using ticks instead
-func (mt *minBarFX) Volume(i int) float64 {
-	return float64(mt.ta[i].Ticks)
+func (mt *minBarFX) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64) {
+	Ti, Op, Hi, Lo, Cl, Vol = mt.ta[i].Time, float64(mt.ta[i].Open)*mt.fDiv,
+		float64(mt.ta[i].High)*mt.fDiv, float64(mt.ta[i].Low)*mt.fDiv,
+		float64(mt.ta[i].Close)*mt.fDiv, float64(mt.ta[i].Ticks)
+	return
 }
 
 type minBarTA struct {
 	//period Period
-	//startT timeT64
-	//endT   timeT64
+	startT timeT64
+	endT   timeT64
 	fMulti float64
 	fDiv   float64
 	ta     []MinTA
@@ -120,28 +102,11 @@ func (mt *minBarTA) Len() int {
 	return len(mt.ta)
 }
 
-func (mt *minBarTA) Time(i int) timeT64 {
-	return timeT64(mt.ta[i].Time)
-}
-
-func (mt *minBarTA) Open(i int) float64 {
-	return float64(mt.ta[i].Open) * mt.fDiv
-}
-
-func (mt *minBarTA) High(i int) float64 {
-	return float64(mt.ta[i].High) * mt.fDiv
-}
-
-func (mt *minBarTA) Low(i int) float64 {
-	return float64(mt.ta[i].Low) * mt.fDiv
-}
-
-func (mt *minBarTA) Close(i int) float64 {
-	return float64(mt.ta[i].Close) * mt.fDiv
-}
-
-func (mt *minBarTA) Volume(i int) float64 {
-	return float64(mt.ta[i].Volume)
+func (mt *minBarTA) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64) {
+	Ti, Op, Hi, Lo, Cl, Vol = timeT64(mt.ta[i].Time), float64(mt.ta[i].Open)*mt.fDiv,
+		float64(mt.ta[i].High)*mt.fDiv, float64(mt.ta[i].Low)*mt.fDiv,
+		float64(mt.ta[i].Close)*mt.fDiv, float64(mt.ta[i].Volume)
+	return
 }
 
 var errBarPeriod = errors.New("Invalid period for baseBar")
@@ -170,11 +135,24 @@ func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err e
 	endT := timeT64(endD.UTC().Unix())
 	endT--
 	var bars = Bars{symKey: fKey, period: period, startDt: startT, endDt: endT}
-	bars.Date = Dates(&mBar)
-	bars.Open = Opens(&mBar)
-	bars.High = Highs(&mBar)
-	bars.Low = Lows(&mBar)
-	bars.Close = Closes(&mBar)
-	bars.Volume = Volumes(&mBar)
+	cnt := mBar.Len()
+	bars.Date = make([]timeT64, cnt)
+	bars.Open = make([]float64, cnt)
+	bars.High = make([]float64, cnt)
+	bars.Low = make([]float64, cnt)
+	bars.Close = make([]float64, cnt)
+	bars.Volume = make([]float64, cnt)
+	for i := 0; i < cnt; i++ {
+		bars.Date[i], bars.Open[i], bars.High[i], bars.Low[i], bars.Close[i],
+			bars.Volume[i] = mBar.BarValue(i)
+	}
+	/*
+		bars.Date = Dates(&mBar)
+		bars.Open = Opens(&mBar)
+		bars.High = Highs(&mBar)
+		bars.Low = Lows(&mBar)
+		bars.Close = Closes(&mBar)
+		bars.Volume = Volumes(&mBar)
+	*/
 	return bars.loadBars(pair, period, mBar.startT, mBar.endT)
 }

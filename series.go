@@ -20,12 +20,7 @@ type TimeSeries interface {
 // TaSeries TA OHLCV
 type TaSeries interface {
 	Len() int
-	Time(i int) timeT64
-	Open(i int) float64
-	High(i int) float64
-	Low(i int) float64
-	Close(i int) float64
-	Volume(i int) float64
+	BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64)
 }
 
 func NewSlice(s Series) (res []float64) {
@@ -36,78 +31,6 @@ func NewSlice(s Series) (res []float64) {
 	res = make([]float64, ll)
 	for i := 0; i < ll; i++ {
 		res[i] = s.DataAt(i)
-	}
-	return
-}
-
-func Dates(s TaSeries) (res []timeT64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]timeT64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.Time(i)
-	}
-	return
-}
-
-func Opens(s TaSeries) (res []float64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]float64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.Open(i)
-	}
-	return
-}
-
-func Highs(s TaSeries) (res []float64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]float64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.High(i)
-	}
-	return
-}
-
-func Lows(s TaSeries) (res []float64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]float64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.Low(i)
-	}
-	return
-}
-
-func Closes(s TaSeries) (res []float64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]float64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.Close(i)
-	}
-	return
-}
-
-func Volumes(s TaSeries) (res []float64) {
-	if s.Len() <= 0 {
-		return
-	}
-	ll := s.Len()
-	res = make([]float64, ll)
-	for i := 0; i < ll; i++ {
-		res[i] = s.Volume(i)
 	}
 	return
 }
