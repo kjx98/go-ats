@@ -1,11 +1,17 @@
 package ats
 
 import (
+	"encoding/csv"
 	"errors"
+	"io"
+	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/kjx98/avl"
+	"github.com/kjx98/golib/julian"
+	"github.com/kjx98/golib/to"
 )
 
 type account struct {
@@ -34,6 +40,70 @@ type simOrderType struct {
 
 type orderBook struct {
 	bids, asks *avl.Tree
+}
+
+type simTick struct {
+	curP  int
+	ticks []Tick
+}
+
+type simTickFX struct {
+	curP  int
+	ticks []TickFX
+}
+
+func (sti *simTick) Time() DateTimeMs {
+	curP := sti.curP
+	if curP > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return sti.ticks[curP].Time.DateTimeMs()
+}
+
+func (sti *simTick) TickValue() (bid, ask, last int32, vol uint32) {
+	curP := sti.curP
+	if curP > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return 0, 0, sti.ticks[curP].Last, sti.ticks[curP].Volume
+}
+
+func (sti *simTick) Next() error {
+	sti.curP++
+	if sti.curP >= len(sti.ticks) {
+		return io.EOF
+	}
+	return nil
+}
+
+func (sti *simTickFX) Time() DateTimeMs {
+	curP := sti.curP
+	if curP > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return sti.ticks[curP].Time
+}
+
+func (sti *simTickFX) TickValue() (bid, ask, last int32, vol uint32) {
+	curP := sti.curP
+	if curP > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return sti.ticks[curP].Bid, sti.ticks[curP].Ask, 0, 0
+}
+
+func (sti *simTickFX) Next() error {
+	sti.curP++
+	if sti.curP >= len(sti.ticks) {
+		return io.EOF
+	}
+	return nil
+}
+
+type simTicker interface {
+	Time() DateTimeMs
+	Next() error
+	TickValue() (bid, ask, last int32, vol uint32)
 }
 
 func bidCompare(a, b interface{}) int {
@@ -79,12 +149,15 @@ var simOrders = []simOrderType{}
 var startTime, endTime timeT64
 var simCurrent DateTimeMs
 var simVmLock sync.RWMutex
+var simTickMap = map[SymbolKey]simTicker{}
+var simTickRun map[SymbolKey]simTicker
 
 // simStatus should be atomic
 var simStatus int32
 var maxAllocHeap uint64
 var maxSysHeap uint64
 var timeAtMaxAlloc DateTimeMs
+var onceLoad sync.Once
 
 // simSymbolQ symbol fKey map
 var simSymbolsQ = map[int]*Quotes{}
@@ -113,6 +186,59 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	return bb, nil
 }
 
+func simLoadSymbols() {
+	onceLoad.Do(func() {
+		if fd, err := os.Open("universe.csv"); err != nil {
+			panic("open universe.csv error")
+		} else {
+			defer fd.Close()
+			csvR := csv.NewReader(fd)
+			line, err := csvR.Read()
+			for err == nil {
+				// process a line
+				if line[0] != "" && len(line) > 1 {
+					newSymbolInfo(line[0])
+					if si, err := GetSymbolInfo(line[0]); err == nil {
+						// try load tick, min, day data
+						var st, dt julian.JulianDay
+						if len(line) > 2 {
+							st = julian.FromUint32(uint32(to.Int(line[2])))
+							if len(line) > 3 {
+								dt = julian.FromUint32(uint32(to.Int(line[3])))
+							}
+						}
+						if si.IsForex {
+							if strings.Contains(line[1], "t") {
+								if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
+									// load to sim
+									var tickD = simTickFX{}
+									tickD.ticks = res
+									simTickMap[si.FastKey()] = &tickD
+								}
+
+							}
+						}
+						if strings.Contains(line[1], "m") {
+							// loadMindata
+							if si.IsForex {
+								LoadBarFX(line[0], Min1, st, dt)
+							}
+						}
+						if strings.Contains(line[1], "d") {
+							// load daily Bar
+						}
+					}
+				}
+				line, err = csvR.Read()
+			}
+		}
+	})
+	simTickRun = map[SymbolKey]simTicker{}
+	for k, v := range simTickMap {
+		simTickRun[k] = v
+	}
+}
+
 // every instance of VM should be with same configure
 func (b simBroker) Start(c Config) error {
 	// read Config, ...
@@ -132,6 +258,13 @@ func (b simBroker) Start(c Config) error {
 	atomic.StoreInt32(&simStatus, VmStart)
 	// load Bars
 	// build ticks
+	simLoadSymbols()
+	// start Tick feed goroutine
+	if c.GetInt("RunTick", 0) != 0 {
+		// go routint tick matcher
+	} else {
+		// go bar matcher
+	}
 	atomic.StoreInt32(&simStatus, VmRunning)
 	return nil
 }
