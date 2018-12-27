@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/kjx98/golib/julian"
 )
 
@@ -21,13 +23,6 @@ type Symbol struct {
 }
 
 var symbolsMap = map[string]*Symbol{}
-
-func LastOfDB(code string) (res uint32) {
-	if sym, ok := symbolsMap[code]; ok {
-		res = sym.EndDate.Uint32()
-	}
-	return
-}
 
 func getTickerExchange(ticker string) string {
 	switch ticker[:2] {
@@ -81,7 +76,7 @@ func GetDB() *sql.DB {
 var myDB *sql.DB
 
 func OpenDB() (*sql.DB, error) {
-	if db, err := sql.Open("mysql", "tadb?charset=gbk"); err != nil {
+	if db, err := sql.Open("mysql", "/tadb?charset=gbk"); err != nil {
 		return nil, err
 	} else {
 		myDB = db
@@ -104,15 +99,18 @@ func OpenDB() (*sql.DB, error) {
 	return myDB, nil
 }
 
-func GetChart(sym string) (res []DayTA) {
+func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 	si, err := GetSymbolInfo(sym)
 	if err != nil {
+		fmt.Println("GetSymbolInfo err", err)
 		return
 	}
 	dMulti := digitMulti(si.PriceDigits)
 	rows, err := myDB.Query("select * from day_ta where code='" +
 		sym + "' order by ta_time")
-	if err == nil {
+	if err != nil {
+		fmt.Println("myDB query err", err)
+	} else {
 		var Day string
 		var Open, High, Low, Close float64
 		var Volume int64
@@ -133,6 +131,12 @@ func GetChart(sym string) (res []DayTA) {
 			var dayDD = DayTA{Date: julian.FromString(Day), Open: int32(Open * dMulti),
 				High: int32(High * dMulti), Low: int32(Low * dMulti),
 				Close: int32(Close * dMulti), Volume: Volume, Turnover: Turnover}
+			if dayDD.Date < startD {
+				continue
+			}
+			if endD != 0 && dayDD.Date > endD {
+				continue
+			}
 			res = append(res, dayDD)
 		}
 	}

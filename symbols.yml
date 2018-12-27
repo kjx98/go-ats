@@ -60,8 +60,8 @@ sz0:
     tickerLen: 8
     dateLen: 0
 
-sz3:
-    ticker: sz3
+sz30:
+    ticker: sz30
     name: Shangzhen GEM
     base:
         market: SZSE
@@ -89,6 +89,36 @@ sz131:
         lotSize: 100
         commissionRate: 0.001
         commisssionType: 1
+    tickerLen: 8
+    dateLen: 0
+
+sz399:
+    ticker: sz399
+    name: Shangzhen Index
+    base:
+        market: SZSE
+        volumeMin: 100
+        volumeMax: 10000000
+        volumeStep: 100
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 0
+        commissionRate: 0.001
+    tickerLen: 8
+    dateLen: 0
+
+sh000:
+    ticker: sh000
+    name: Shanghai Index
+    base:
+        market: SHSE
+        volumeMin: 100
+        volumeMax: 10000000
+        volumeStep: 100
+        priceStep: 0.01
+        digits: 2
+        volumeDigits: 0
+        commissionRate: 0.001
     tickerLen: 8
     dateLen: 0
 
