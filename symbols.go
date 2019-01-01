@@ -3,9 +3,10 @@ package ats
 import (
 	"errors"
 	"fmt"
+	"github.com/op/go-logging"
 	"io/ioutil"
-	"log"
 	"math"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -264,6 +265,7 @@ func (data symbolTemps) Swap(i, j int) {
 	data[i], data[j] = data[j], data[i]
 }
 
+var log = logging.MustGetLogger("go-ats")
 var initTemp = symbolTemps{
 	{TickerPrefix: "cu",
 		Name: "copper future contract",
@@ -461,7 +463,7 @@ func initSymbols() {
 					initTemp = append(initTemp, ss)
 				}
 			} else {
-				log.Println("Decode symbols.yml", err)
+				log.Warning("Decode symbols.yml", err)
 			}
 		}
 		sort.Sort(initTemp)
@@ -493,19 +495,27 @@ func initSymbols() {
 			if err := yaml.Unmarshal(bb, &symMap); err == nil {
 				for sym, ss := range symMap {
 					newSymbolInfo(sym)
-					//log.Println("Load Ticker", sym)
+					//log.Info("Load Ticker", sym)
 					if _, err := GetSymbolInfo(sym); err == nil {
 						var ti = tickConf{sym, ss.TickStart, ss.TickEnd}
 						initTicks[sym] = ti
 					}
 				}
 			} else {
-				log.Println("Decode ticks.yml", err)
+				log.Error("Decode ticks.yml", err)
 			}
 		}
 	})
 }
 
+//	`%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}`
 func init() {
+	var format = logging.MustStringFormatter(
+		`%{color}%{time:01-02 15:04:05}  ▶ %{level:.4s} %{color:reset} %{message}`,
+	)
+
+	logback := logging.NewLogBackend(os.Stderr, "", 0)
+	logfmt := logging.NewBackendFormatter(logback, format)
+	logging.SetBackend(logfmt)
 	initSymbols()
 }

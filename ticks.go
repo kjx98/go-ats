@@ -70,6 +70,28 @@ type DayTA struct {
 	Volume   int64
 }
 
+type cacheMinFXType struct {
+	startD julian.JulianDay
+	endD   julian.JulianDay
+	res    []MinFX
+}
+
+type cacheMinTAType struct {
+	startD julian.JulianDay
+	endD   julian.JulianDay
+	res    []MinTA
+}
+
+type cacheDayTAType struct {
+	startD julian.JulianDay
+	endD   julian.JulianDay
+	res    []DayTA
+}
+
+var cacheMinFX = map[string]cacheMinFXType{}
+var cacheMinTA = map[string]cacheMinTAType{}
+var cacheDayTA = map[string]cacheDayTAType{}
+
 type minBarFX struct {
 	startT timeT64
 	endT   timeT64

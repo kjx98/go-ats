@@ -2,7 +2,6 @@ package ats
 
 import (
 	"errors"
-	"log"
 	"reflect"
 	"runtime"
 	"strings"
@@ -154,7 +153,7 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 		subs = append(subs, subo)
 	}
 	if err = br.SubscribeQuotes(subs); err != nil {
-		log.Println("Broker SubscribeQuotes", err)
+		log.Error("Broker SubscribeQuotes", err)
 		return
 	}
 	return

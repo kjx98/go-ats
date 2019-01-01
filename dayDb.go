@@ -76,6 +76,9 @@ func GetDB() *sql.DB {
 var myDB *sql.DB
 
 func OpenDB() (*sql.DB, error) {
+	if myDB != nil {
+		return myDB, nil
+	}
 	if db, err := sql.Open("mysql", "/tadb?charset=gbk"); err != nil {
 		return nil, err
 	} else {
@@ -95,11 +98,30 @@ func OpenDB() (*sql.DB, error) {
 				EndDate:   julian.FromString(end), Exchange: exch}
 			symbolsMap[tick] = &sym
 		}
+	} else {
+		myDB = nil
+		return nil, err
 	}
 	return myDB, nil
 }
 
+var cacheDayHits int
+var cacheDayMiss int
+
+func DayDbCacheStatus() string {
+	return fmt.Sprintf("DayTACache Status: Hits %d, Miss: %d", cacheDayHits, cacheDayMiss)
+}
+
 func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
+	if cc, ok := cacheDayTA[sym]; ok {
+		if startD == cc.startD && endD == cc.endD {
+			res = cc.res
+			cacheDayHits++
+			return
+		} else {
+			cacheDayMiss++
+		}
+	}
 	si, err := GetSymbolInfo(sym)
 	if err != nil {
 		fmt.Println("GetSymbolInfo err", err)
@@ -140,5 +162,14 @@ func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 			res = append(res, dayDD)
 		}
 	}
+	var cc = cacheDayTAType{startD: startD, endD: endD}
+	cc.res = res
+	cacheDayTA[sym] = cc
 	return
+}
+
+func init() {
+	if _, err := OpenDB(); err != nil {
+		log.Warning("init dayDb, OpenDB()", err)
+	}
 }

@@ -142,7 +142,7 @@ func askCompare(a, b interface{}) int {
 
 var acctLock sync.RWMutex
 var nAccounts int
-var simAccounts = []*account{}
+var simAccounts = map[simBroker]*account{}
 var orderLock sync.RWMutex
 var nOrders int
 var simOrders = []simOrderType{}
@@ -182,7 +182,7 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	var acct = account{evChan: ch}
 	bb := simBroker(nAccounts)
 	nAccounts++
-	simAccounts = append(simAccounts, &acct)
+	simAccounts[bb] = &acct
 	return bb, nil
 }
 
@@ -215,17 +215,27 @@ func simLoadSymbols() {
 									tickD.ticks = res
 									simTickMap[si.FastKey()] = &tickD
 								}
-
 							}
 						}
 						if strings.Contains(line[1], "m") {
 							// loadMindata
 							if si.IsForex {
 								LoadBarFX(line[0], Min1, st, dt)
+							} else {
+								// try load Min5
 							}
 						}
 						if strings.Contains(line[1], "d") {
 							// load daily Bar
+							if si.IsForex {
+								// load FX daily
+							} else {
+								LoadDayBar(line[0], Daily, st, dt)
+							}
+						}
+						if _, ok := simTickMap[si.FastKey()]; !ok {
+							// no tick, forge tick from Min1/Min5 or Daily
+							forgeTicks(&si)
 						}
 					}
 				}
@@ -236,6 +246,26 @@ func simLoadSymbols() {
 	simTickRun = map[SymbolKey]simTicker{}
 	for k, v := range simTickMap {
 		simTickRun[k] = v
+	}
+}
+
+func forgeTicks(si *SymbolInfo) {
+	if si.IsForex {
+		if cc, ok := cacheMinFX[si.Ticker]; ok {
+			// forge via FX Min1
+			_ = cc.res
+			return
+		}
+	} else {
+		if cc, ok := cacheMinTA[si.Ticker]; ok {
+			// forge via Min1/Min5
+			_ = cc.res
+			return
+		}
+	}
+	if cc, ok := cacheDayTA[si.Ticker]; ok {
+		// forge via Daily
+		_ = cc.res
 	}
 }
 
@@ -260,11 +290,14 @@ func (b simBroker) Start(c Config) error {
 	// build ticks
 	simLoadSymbols()
 	// start Tick feed goroutine
-	if c.GetInt("RunTick", 0) != 0 {
-		// go routint tick matcher
-	} else {
-		// go bar matcher
-	}
+	// always run tick
+	/*
+		if c.GetInt("RunTick", 0) != 0 {
+			// go routint tick matcher
+		} else {
+			// go bar matcher
+		}
+	*/
 	atomic.StoreInt32(&simStatus, VmRunning)
 	return nil
 }
@@ -307,22 +340,22 @@ func (b simBroker) SubscribeQuotes(qq []QuoteSubT) error {
 }
 
 func (b simBroker) Equity() float64 {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.equity
 }
 
 func (b simBroker) Balance() float64 {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.balance
 }
 
 func (b simBroker) Cash() float64 {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.fund
 }
 
 func (b simBroker) FreeMargin() float64 {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.equity - acct.margin
 }
 
@@ -335,7 +368,7 @@ func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, st
 }
 
 func (b simBroker) CancelOrder(oid int) {
-	//acct := simAccounts[int(b)]
+	//acct := simAccounts[b]
 	if oid >= nOrders {
 		return
 	}
@@ -345,7 +378,7 @@ func (b simBroker) CancelOrder(oid int) {
 }
 
 func (b simBroker) CloseOrder(oId int) {
-	//acct := simAccounts[int(b)]
+	//acct := simAccounts[b]
 	// if open, close with market
 	// if stoploss, remove stoploss, change to market
 	if oId >= nOrders {
@@ -366,12 +399,12 @@ func (b simBroker) GetOrder(oId int) *OrderType {
 }
 
 func (b simBroker) GetOrders() []int {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.orders
 }
 
 func (b simBroker) GetPosition(sym string) (vPos PositionType) {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	for _, v := range acct.pos {
 		if v.Symbol == sym {
 			vPos = v
@@ -382,7 +415,7 @@ func (b simBroker) GetPosition(sym string) (vPos PositionType) {
 }
 
 func (b simBroker) GetPositions() []PositionType {
-	acct := simAccounts[int(b)]
+	acct := simAccounts[b]
 	return acct.pos
 }
 

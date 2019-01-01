@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"unsafe"
 
@@ -76,7 +75,7 @@ func LoadTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []T
 	if startD == 0 {
 		if tiC, ok := initTicks[pair]; ok {
 			startD = julian.FromUint32(tiC.TickStart)
-			log.Println("LoadTickFX: startDate 0, replace to ", startD)
+			log.Info("LoadTickFX: startDate 0, replace to ", startD)
 		}
 	}
 	startT := JulianToDateTimeMs(startD)
@@ -150,13 +149,6 @@ func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 	return
 }
 
-type cacheMinDukasType struct {
-	startD julian.JulianDay
-	endD   julian.JulianDay
-	res    []MinFX
-}
-
-var cacheMinDukas = map[string]cacheMinDukasType{}
 var cacheDukasHits int
 var cacheDukasMiss int
 
@@ -171,11 +163,11 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 	if startD == 0 {
 		if tiC, ok := initTicks[pair]; ok {
 			startD = julian.FromUint32(tiC.TickStart)
-			log.Println("LoadMinFX: startDate 0, replace to ", startD)
+			log.Info("LoadMinFX: startDate 0, replace to ", startD)
 		}
 	}
 	startD = startD.Weekbase()
-	if cc, ok := cacheMinDukas[pair]; ok {
+	if cc, ok := cacheMinFX[pair]; ok {
 		if startD == cc.startD && endD == cc.endD {
 			res = cc.res
 			cacheDukasHits++
@@ -184,7 +176,7 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 			cacheDukasMiss++
 		}
 	}
-	var cc = cacheMinDukasType{startD: startD, endD: endD}
+	var cc = cacheMinFXType{startD: startD, endD: endD}
 
 	tCnt := 0
 	var mins []minDT
@@ -205,6 +197,6 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 		startD += 7
 	}
 	cc.res = res
-	cacheMinDukas[pair] = cc
+	cacheMinFX[pair] = cc
 	return
 }
