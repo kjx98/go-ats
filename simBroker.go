@@ -4,10 +4,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/kjx98/avl"
 	"github.com/kjx98/golib/julian"
@@ -201,6 +203,7 @@ func simLoadSymbols() {
 					if si, err := GetSymbolInfo(line[0]); err == nil {
 						// try load tick, min, day data
 						var st, dt julian.JulianDay
+						var bNeedForge = true
 						if len(line) > 2 {
 							st = julian.FromUint32(uint32(to.Int(line[2])))
 							if len(line) > 3 {
@@ -214,7 +217,12 @@ func simLoadSymbols() {
 									var tickD = simTickFX{}
 									tickD.ticks = res
 									simTickMap[si.FastKey()] = &tickD
+									bNeedForge = false
 								}
+							}
+						} else {
+							if strings.Contains(line[1], "t") {
+								// try load ticks for Non FX
 							}
 						}
 						if strings.Contains(line[1], "m") {
@@ -233,7 +241,7 @@ func simLoadSymbols() {
 								LoadDayBar(line[0], Daily, st, dt)
 							}
 						}
-						if _, ok := simTickMap[si.FastKey()]; !ok {
+						if bNeedForge {
 							// no tick, forge tick from Min1/Min5 or Daily
 							forgeTicks(&si)
 						}
@@ -250,22 +258,101 @@ func simLoadSymbols() {
 }
 
 func forgeTicks(si *SymbolInfo) {
+	forgeTicksFromBar := func(cc cacheTAer, period Period) {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		if si.IsForex {
+			var tickD = simTickFX{}
+			for i := 0; i < cc.Len(); i++ {
+				var atick TickFX
+				ti, o, h, l, c, _ := cc.BarValue(i)
+				atick.Time = ti.DateTimeMs()
+				atick.Bid = o
+				atick.Ask = o + si.DefSpread
+				tickD.ticks = append(tickD.ticks, atick)
+				hto := r.Int63() % int64(period)
+				lto := r.Int63() % int64(period)
+				if hto > lto {
+					atick.Time = (ti + timeT64(lto)).DateTimeMs()
+					atick.Bid = l
+					atick.Ask = l + si.DefSpread
+					tickD.ticks = append(tickD.ticks, atick)
+					atick.Time = (ti + timeT64(hto)).DateTimeMs()
+					atick.Bid = h
+					atick.Ask = h + si.DefSpread
+					tickD.ticks = append(tickD.ticks, atick)
+				} else {
+					atick.Time = (ti + timeT64(hto)).DateTimeMs()
+					atick.Bid = h
+					atick.Ask = h + si.DefSpread
+					tickD.ticks = append(tickD.ticks, atick)
+					atick.Time = (ti + timeT64(lto)).DateTimeMs()
+					atick.Bid = l
+					atick.Ask = l + si.DefSpread
+					tickD.ticks = append(tickD.ticks, atick)
+				}
+				// last for close
+				atick.Time = (ti + timeT64(period)).DateTimeMs() - 1
+				atick.Bid = c
+				atick.Ask = c + si.DefSpread
+				tickD.ticks = append(tickD.ticks, atick)
+			}
+			simTickMap[si.FastKey()] = &tickD
+		} else {
+			var tickD = simTick{}
+			for i := 0; i < cc.Len(); i++ {
+				var atick Tick
+				ti, o, h, l, c, vol := cc.BarValue(i)
+				atick.Time = timeT32(ti)
+				atick.Last = o
+				atick.Volume = uint32(vol * 3 / 8)
+				tickD.ticks = append(tickD.ticks, atick)
+				hto := r.Int63() % int64(period)
+				lto := r.Int63() % int64(period)
+				if hto > lto {
+					atick.Time = timeT32(ti + timeT64(lto))
+					atick.Last = l
+					atick.Volume = uint32(vol / 8)
+					tickD.ticks = append(tickD.ticks, atick)
+					atick.Time = timeT32(ti + timeT64(hto))
+					atick.Last = h
+					atick.Volume = uint32(vol / 8)
+					tickD.ticks = append(tickD.ticks, atick)
+				} else {
+					atick.Time = timeT32(ti + timeT64(hto))
+					atick.Last = h
+					atick.Volume = uint32(vol / 8)
+					tickD.ticks = append(tickD.ticks, atick)
+					atick.Time = timeT32(ti + timeT64(lto))
+					atick.Last = l
+					atick.Volume = uint32(vol / 8)
+					tickD.ticks = append(tickD.ticks, atick)
+				}
+				// last for close
+				atick.Time = timeT32(ti+timeT64(period)) - 1
+				atick.Last = c
+				atick.Volume = uint32(vol * 3 / 8)
+				tickD.ticks = append(tickD.ticks, atick)
+			}
+			simTickMap[si.FastKey()] = &tickD
+		}
+	}
 	if si.IsForex {
 		if cc, ok := cacheMinFX[si.Ticker]; ok {
 			// forge via FX Min1
-			_ = cc.res
+			forgeTicksFromBar(&cc, Min1)
 			return
 		}
 	} else {
 		if cc, ok := cacheMinTA[si.Ticker]; ok {
-			// forge via Min1/Min5
-			_ = cc.res
+			// forge via Min5
+			forgeTicksFromBar(&cc, Min5)
 			return
 		}
 	}
 	if cc, ok := cacheDayTA[si.Ticker]; ok {
 		// forge via Daily
-		_ = cc.res
+		forgeTicksFromBar(&cc, Daily)
+		return
 	}
 }
 

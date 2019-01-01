@@ -3,7 +3,6 @@ package ats
 import (
 	"errors"
 	"fmt"
-	"github.com/op/go-logging"
 	"io/ioutil"
 	"math"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/op/go-logging"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -41,6 +42,7 @@ type symbolBase struct {
 	LotSize        int     `yaml:"lotSize,omitempty"`
 	Margin         float64 `yaml:"margin,omitempty"`
 	IsForex        bool    `yaml:"forex,omitempty"`
+	DefSpread      int32   `yaml:"defSpread,omitempty"`
 	CurrencySym    string  `yaml:"currency,omitempty"`
 	CommissionType int     `yaml:"commisssionType,omitempty"`
 	CommissionRate float64 `yaml:"commissionRate,omitempty"`

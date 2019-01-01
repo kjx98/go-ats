@@ -88,6 +88,50 @@ type cacheDayTAType struct {
 	res    []DayTA
 }
 
+type cacheTAer interface {
+	Len() int
+	BarValue(row int) (ti timeT64, o, h, l, c int32, vol int64)
+}
+
+func (fxm *cacheMinFXType) Len() int {
+	return len(fxm.res)
+}
+
+func (fxm *cacheMinFXType) BarValue(r int) (ti timeT64, o, h, l, c int32, vol int64) {
+	if r < 0 || r > len(fxm.res) {
+		return
+	}
+	ti, o, h, l, c, vol = fxm.res[r].Time, fxm.res[r].Open, fxm.res[r].High, fxm.res[r].Low,
+		fxm.res[r].Close, int64(fxm.res[r].Ticks)
+	return
+}
+
+func (fxm *cacheMinTAType) Len() int {
+	return len(fxm.res)
+}
+
+func (fxm *cacheMinTAType) BarValue(r int) (ti timeT64, o, h, l, c int32, vol int64) {
+	if r < 0 || r > len(fxm.res) {
+		return
+	}
+	ti, o, h, l, c, vol = timeT64(fxm.res[r].Time), fxm.res[r].Open, fxm.res[r].High, fxm.res[r].Low,
+		fxm.res[r].Close, int64(fxm.res[r].Volume)
+	return
+}
+
+func (fxm *cacheDayTAType) Len() int {
+	return len(fxm.res)
+}
+
+func (fxm *cacheDayTAType) BarValue(r int) (ti timeT64, o, h, l, c int32, vol int64) {
+	if r < 0 || r > len(fxm.res) {
+		return
+	}
+	ti, o, h, l, c, vol = timeT64(fxm.res[r].Date.UTC().Unix()), fxm.res[r].Open, fxm.res[r].High, fxm.res[r].Low,
+		fxm.res[r].Close, int64(fxm.res[r].Volume)
+	return
+}
+
 var cacheMinFX = map[string]cacheMinFXType{}
 var cacheMinTA = map[string]cacheMinTAType{}
 var cacheDayTA = map[string]cacheDayTAType{}

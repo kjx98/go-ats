@@ -171,6 +171,7 @@ EUR:
         volumeDigits: 2
         lotSize: 1000
         margin: 0.02
+        defSpread: 20
         forex: true
         commissionRate: 0.1
         commisssionType: 1
@@ -190,6 +191,7 @@ USD:
         lotSize: 1000
         margin: 0.02
         forex: true
+        defSpread: 30
         commissionRate: 0.1
         commisssionType: 1
     tickerLen: 6
@@ -209,6 +211,7 @@ GBP:
         lotSize: 1000
         margin: 0.02
         forex: true
+        defSpread: 20
         commissionRate: 0.1
         commisssionType: 1
     tickerLen: 6
@@ -227,6 +230,7 @@ XAU:
         lotSize: 100
         margin: 0.02
         forex: true
+        defSpread: 50
         commissionRate: 0.5
         commisssionType: 1
     tickerLen: 6
@@ -245,6 +249,7 @@ XAG:
         lotSize: 1000
         margin: 0.02
         forex: true
+        defSpread: 50
         commissionRate: 0.5
         commisssionType: 1
     tickerLen: 6
@@ -262,6 +267,7 @@ BTC:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        defSpread: 1500
         commissionRate: 0.001
     tickerLen: 6
 
@@ -278,6 +284,7 @@ ETH:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        defSpread: 500
         commissionRate: 0.001
     tickerLen: 6
 
@@ -294,6 +301,7 @@ EOS:
         volumeDigits: 4
         margin: 1.0
         forex: true
+        defSpread: 20
         commissionRate: 0.001
     tickerLen: 6
 
