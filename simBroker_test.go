@@ -15,7 +15,21 @@ func TestLoadRunTick(t *testing.T) {
 		want    int
 		wantErr bool
 	}{
-	// TODO: Add test cases.
+		// TODO: Add test cases.
+		{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
+		{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
+		{"LoadRunTick-JPY", args{"USDJPY"}, 2126252, false},
+		{"LoadRunTick-XAU", args{"XAUUSD"}, 2009644, false},
+		{"LoadRunTick-ETF", args{"sh510500"}, 5648, false},
+		{"LoadRunTick-601318", args{"sh601318"}, 11268, false},
+	}
+	if noDukasData {
+		t.Log("no FX data")
+		return
+	}
+	if len(symbolsMap) == 0 {
+		t.Log("no mysql connection")
+		return
 	}
 	simLoadSymbols()
 	for _, tt := range tests {
@@ -26,7 +40,7 @@ func TestLoadRunTick(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got.Len(), tt.want) {
-				t.Errorf("LoadRunTick() = %d, want %d", got, tt.want)
+				t.Errorf("LoadRunTick() = %d, want %d", got.Len(), tt.want)
 			}
 		})
 	}

@@ -13,7 +13,7 @@ func TestGetChart(t *testing.T) {
 		endD   julian.JulianDay
 	}
 	st1 := julian.FromUint32(20050301)
-	en1 := julian.FromUint32(20181228)
+	en1 := julian.FromUint32(20181231)
 	tests := []struct {
 		name    string
 		args    args
@@ -34,7 +34,7 @@ func TestGetChart(t *testing.T) {
 		}
 	*/
 	if len(symbolsMap) == 0 {
-		t.Log("OpenDB read no symbols")
+		t.Log("no mysql connection")
 		return
 	}
 	initSymbols()
