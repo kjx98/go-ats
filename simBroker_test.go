@@ -45,3 +45,29 @@ func TestLoadRunTick(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateTick(t *testing.T) {
+	type args struct {
+		sym string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{"LoadRunTick-EUR", args{"EURUSD"}, false},
+		{"LoadRunTick-GBP", args{"GBPUSD"}, false},
+		{"LoadRunTick-JPY", args{"USDJPY"}, false},
+		{"LoadRunTick-XAU", args{"XAUUSD"}, false},
+		{"LoadRunTick-ETF", args{"sh510500"}, false},
+		{"LoadRunTick-601318", args{"sh601318"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidateTick(tt.args.sym); (err != nil) != tt.wantErr {
+				t.Errorf("ValidateTick() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

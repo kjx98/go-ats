@@ -57,12 +57,20 @@ type simTickFX struct {
 func (sti *simTick) Len() int {
 	return len(sti.ticks)
 }
+
 func (sti *simTick) Time() DateTimeMs {
 	curP := sti.curP
 	if curP > len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[curP].Time.DateTimeMs()
+}
+
+func (sti *simTick) TimeAt(i int) DateTimeMs {
+	if i > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return sti.ticks[i].Time.DateTimeMs()
 }
 
 func (sti *simTick) TickValue() (bid, ask, last int32, vol uint32) {
@@ -93,6 +101,13 @@ func (sti *simTickFX) Time() DateTimeMs {
 	return sti.ticks[curP].Time
 }
 
+func (sti *simTickFX) TimeAt(i int) DateTimeMs {
+	if i > len(sti.ticks) {
+		panic("Out of simTick bound")
+	}
+	return sti.ticks[i].Time
+}
+
 func (sti *simTickFX) TickValue() (bid, ask, last int32, vol uint32) {
 	curP := sti.curP
 	if curP > len(sti.ticks) {
@@ -112,6 +127,7 @@ func (sti *simTickFX) Next() error {
 type simTicker interface {
 	Len() int
 	Time() DateTimeMs
+	TimeAt(i int) DateTimeMs
 	Next() error
 	TickValue() (bid, ask, last int32, vol uint32)
 }
@@ -185,6 +201,7 @@ const (
 var (
 	vmStatusErr     = errors.New("simBroker VM status error")
 	errTickNonExist = errors.New("Tick Data not exist")
+	errTickOrder    = errors.New("Tick Data order error")
 )
 
 type simBroker int
@@ -374,6 +391,24 @@ func LoadRunTick(sym string) (simTicker, error) {
 		return v, nil
 	}
 	return nil, errTickNonExist
+}
+
+func ValidateTick(sym string) error {
+	if si, err := GetSymbolInfo(sym); err != nil {
+		return err
+	} else if v, ok := simTickMap[si.FastKey()]; ok {
+		var oldTi DateTimeMs
+		for i := 0; i < v.Len(); i++ {
+			if ti := v.TimeAt(i); ti < oldTi {
+				return errTickOrder
+			} else {
+				oldTi = ti
+			}
+		}
+	} else {
+		return errTickNonExist
+	}
+	return nil
 }
 
 // every instance of VM should be with same configure
