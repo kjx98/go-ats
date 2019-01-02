@@ -114,13 +114,15 @@ func DayDbCacheStatus() string {
 
 func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 	if cc, ok := cacheDayTA[sym]; ok {
-		if startD == cc.startD && endD == cc.endD {
+		if startD >= cc.startD && endD == cc.endD {
 			res = cc.res
 			cacheDayHits++
 			return
 		} else {
 			cacheDayMiss++
 		}
+	} else {
+		cacheDayMiss++
 	}
 	si, err := GetSymbolInfo(sym)
 	if err != nil {

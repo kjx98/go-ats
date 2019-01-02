@@ -54,6 +54,9 @@ type simTickFX struct {
 	ticks []TickFX
 }
 
+func (sti *simTick) Len() int {
+	return len(sti.ticks)
+}
 func (sti *simTick) Time() DateTimeMs {
 	curP := sti.curP
 	if curP > len(sti.ticks) {
@@ -76,6 +79,10 @@ func (sti *simTick) Next() error {
 		return io.EOF
 	}
 	return nil
+}
+
+func (sti *simTickFX) Len() int {
+	return len(sti.ticks)
 }
 
 func (sti *simTickFX) Time() DateTimeMs {
@@ -103,6 +110,7 @@ func (sti *simTickFX) Next() error {
 }
 
 type simTicker interface {
+	Len() int
 	Time() DateTimeMs
 	Next() error
 	TickValue() (bid, ask, last int32, vol uint32)
@@ -174,7 +182,10 @@ const (
 	VmStoping
 )
 
-var vmStatusErr = errors.New("simBroker VM status error")
+var (
+	vmStatusErr     = errors.New("simBroker VM status error")
+	errTickNonExist = errors.New("Tick Data not exist")
+)
 
 type simBroker int
 
@@ -354,6 +365,15 @@ func forgeTicks(si *SymbolInfo) {
 		forgeTicksFromBar(&cc, Daily)
 		return
 	}
+}
+
+func LoadRunTick(sym string) (simTicker, error) {
+	if si, err := GetSymbolInfo(sym); err != nil {
+		return nil, err
+	} else if v, ok := simTickRun[si.FastKey()]; ok {
+		return v, nil
+	}
+	return nil, errTickNonExist
 }
 
 // every instance of VM should be with same configure

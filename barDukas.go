@@ -168,13 +168,15 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 	}
 	startD = startD.Weekbase()
 	if cc, ok := cacheMinFX[pair]; ok {
-		if startD == cc.startD && endD == cc.endD {
+		if startD >= cc.startD && endD == cc.endD {
 			res = cc.res
 			cacheDukasHits++
 			return
 		} else {
 			cacheDukasMiss++
 		}
+	} else {
+		cacheDukasMiss++
 	}
 	var cc = cacheMinFXType{startD: startD, endD: endD}
 
@@ -197,6 +199,8 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 		startD += 7
 	}
 	cc.res = res
-	cacheMinFX[pair] = cc
+	if maxCnt == 0 {
+		cacheMinFX[pair] = cc
+	}
 	return
 }
