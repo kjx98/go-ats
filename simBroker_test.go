@@ -23,12 +23,8 @@ func TestLoadRunTick(t *testing.T) {
 		{"LoadRunTick-ETF", args{"sh510500"}, 5648, false},
 		{"LoadRunTick-601318", args{"sh601318"}, 11268, false},
 	}
-	if noDukasData {
-		t.Log("no FX data")
-		return
-	}
-	if len(symbolsMap) == 0 {
-		t.Log("no mysql connection")
+	if noDukasData || len(symbolsMap) == 0 {
+		t.Log("no tickData")
 		return
 	}
 	simLoadSymbols()
@@ -62,6 +58,10 @@ func TestValidateTick(t *testing.T) {
 		{"LoadRunTick-XAU", args{"XAUUSD"}, false},
 		{"LoadRunTick-ETF", args{"sh510500"}, false},
 		{"LoadRunTick-601318", args{"sh601318"}, false},
+	}
+	if noDukasData || len(symbolsMap) == 0 {
+		t.Log("no tickData")
+		return
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
