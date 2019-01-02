@@ -13,19 +13,19 @@ func TestGetChart(t *testing.T) {
 		endD   julian.JulianDay
 	}
 	st1 := julian.FromUint32(20050301)
-	en1 := julian.FromUint32(20181227)
+	en1 := julian.FromUint32(20181231)
 	tests := []struct {
 		name    string
 		args    args
 		wantRes int
 	}{
 		// TODO: Add test cases.
-		{"GetChartETF50.1", args{"sh510050", 0, en1}, 3372},
-		{"GetChartETF50.2", args{"sh510050", st1, en1}, 3372},
-		{"GetChartSSI.1", args{"sh000001", 0, en1}, 6855},
-		{"GetChartSSI.2", args{"sh000001", st1, en1}, 6855},
-		{"GetChartSZI.1", args{"sz399001", 0, en1}, 6800},
-		{"GetChartSZ0001", args{"sz000001", 0, en1}, 6583},
+		{"GetChartETF50.1", args{"sh510050", 0, en1}, 3373},
+		{"GetChartETF50.2", args{"sh510050", st1, en1}, 3373},
+		{"GetChartSSI.1", args{"sh000001", 0, en1}, 6856},
+		{"GetChartSSI.2", args{"sh000001", st1, en1}, 6856},
+		{"GetChartSZI.1", args{"sz399001", 0, en1}, 6801},
+		{"GetChartSZ0001", args{"sz000001", 0, en1}, 6584},
 	}
 	/*
 		if _, err := OpenDB(); err != nil {
@@ -34,7 +34,7 @@ func TestGetChart(t *testing.T) {
 		}
 	*/
 	if len(symbolsMap) == 0 {
-		t.Log("OpenDB read no symbols")
+		t.Log("no mysql connection")
 		return
 	}
 	initSymbols()
