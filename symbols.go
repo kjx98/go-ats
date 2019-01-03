@@ -76,6 +76,10 @@ func (s *SymbolInfo) VolumeDigits() int {
 	return s.VolDigits
 }
 
+func (s *SymbolInfo) Multi() float64 {
+	return digitMulti(s.PriceDigits)
+}
+
 // normal Price for order
 func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	p = math.Floor(p/s.PriceStep) * s.PriceStep

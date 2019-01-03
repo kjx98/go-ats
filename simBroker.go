@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -145,6 +146,12 @@ func bidCompare(a, b interface{}) int {
 	if ora.price == orb.price {
 		return ora.oid - orb.oid
 	}
+	if ora.price == 0 {
+		return -1
+	}
+	if orb.price == 0 {
+		return 1
+	}
 	// low price, low priority
 	return int(orb.price) - int(ora.price)
 }
@@ -162,17 +169,22 @@ func askCompare(a, b interface{}) int {
 	if ora.price == orb.price {
 		return ora.oid - orb.oid
 	}
-	// low price, low priority
+	// high price, low priority
 	return int(ora.price) - int(orb.price)
 }
 
+var defaultFund float64 = 1e6
 var acctLock sync.RWMutex
 var nAccounts int
 var simAccounts = map[simBroker]*account{}
 var orderLock sync.RWMutex
-var nOrders int
-var simOrders = []simOrderType{}
+var orderNo int
+var simOrders = map[int]*simOrderType{}
+
+// sim Run start/stop time
 var startTime, endTime timeT64
+
+// current time DateTimeMs of sim Run VM
 var simCurrent DateTimeMs
 var simVmLock sync.RWMutex
 var simTickMap = map[SymbolKey]simTicker{}
@@ -204,12 +216,42 @@ var (
 	errTickOrder    = errors.New("Tick Data order error")
 )
 
+func simInsertOrder(or *simOrderType) {
+	orBook, ok := simOrderBook[or.Symbol]
+	if !ok {
+		orBook.bids = avl.New(bidCompare)
+		orBook.asks = avl.New(askCompare)
+	}
+	if or.OrderType.Dir.Sign() > 0 {
+		// bid
+		orBook.bids.Insert(or)
+	} else {
+		orBook.asks.Insert(or)
+	}
+}
+
+func simRemoveOrder(or *simOrderType) {
+	if orBook, ok := simOrderBook[or.Symbol]; ok {
+		if or.OrderType.Dir.Sign() > 0 {
+			if v := orBook.bids.Find(or); v != nil {
+				orBook.bids.Remove(v)
+			}
+		} else {
+			if v := orBook.asks.Find(or); v != nil {
+				orBook.asks.Remove(v)
+			}
+		}
+	}
+}
+
 type simBroker int
 
 func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	acctLock.Lock()
 	defer acctLock.Unlock()
-	var acct = account{evChan: ch}
+
+	var acct = account{evChan: ch, fundStart: defaultFund, fund: defaultFund,
+		equity: defaultFund, balance: defaultFund}
 	bb := simBroker(nAccounts)
 	nAccounts++
 	simAccounts[bb] = &acct
@@ -441,6 +483,7 @@ func (b simBroker) Start(c Config) error {
 		}
 	*/
 	atomic.StoreInt32(&simStatus, VmRunning)
+	// start go routine process ticks
 	return nil
 }
 
@@ -506,38 +549,93 @@ func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, st
 	defer simVmLock.Unlock()
 	// tobe fix
 	// verify, put to orderbook
-	return 0
+	si, err := GetSymbolInfo(sym)
+	if err != nil {
+		return -1
+	}
+	var prcI = int32(prc * si.Multi())
+	orderNo++
+	var or = simOrderType{simBroker: b, oid: orderNo, price: prcI,
+		OrderType: OrderType{Symbol: sym, Price: prc, StopPrice: stopL, Dir: dir, Qty: qty}}
+	simOrders[orderNo] = &or
+	// put to orderBook
+	simInsertOrder(&or)
+	acct := simAccounts[b]
+	acct.orders = append(acct.orders, orderNo)
+	return orderNo
+}
+
+func simOrderInAcct(acct *account, oid int) bool {
+	idx := sort.SearchInts(acct.orders, oid)
+	if idx >= len(acct.orders) || acct.orders[idx] != oid {
+		return false
+	}
+	return true
 }
 
 func (b simBroker) CancelOrder(oid int) {
-	//acct := simAccounts[b]
-	if oid >= nOrders {
+	acct := simAccounts[b]
+	if oid > orderNo {
+		return
+	}
+	if !simOrderInAcct(acct, oid) {
+		// no such order
 		return
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
 	// remove order from orderbook
+	if or, ok := simOrders[oid]; !ok {
+		return
+	} else {
+		simRemoveOrder(or)
+		or.OrderType.Status = OrderCanceled
+	}
 }
 
 func (b simBroker) CloseOrder(oId int) {
-	//acct := simAccounts[b]
+	acct := simAccounts[b]
 	// if open, close with market
 	// if stoploss, remove stoploss, change to market
-	if oId >= nOrders {
+	if oId > orderNo {
+		return
+	}
+	if !simOrderInAcct(acct, oId) {
+		// no such order
 		return
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
 	// if order open or partfill, changed to market order
+	// remove order from orderbook
+	if or, ok := simOrders[oId]; !ok {
+		return
+	} else {
+		simRemoveOrder(or)
+		switch or.OrderType.Status {
+		case OrderAccept, OrderPartFilled:
+			// change to market order
+			if or.OrderType.StopPrice != 0 {
+				or.OrderType.StopPrice = 0
+			}
+			or.OrderType.Price = 0
+			or.price = 0
+			simInsertOrder(or)
+		case OrderFilled:
+			// do nothing
+		default:
+			or.OrderType.Status = OrderCanceled
+		}
+	}
 }
 
 func (b simBroker) GetOrder(oId int) *OrderType {
-	if oId >= nOrders {
-		return nil
-	}
 	orderLock.RLock()
 	defer orderLock.RUnlock()
-	return &simOrders[oId].OrderType
+	if o, ok := simOrders[oId]; ok {
+		return &o.OrderType
+	}
+	return nil
 }
 
 func (b simBroker) GetOrders() []int {
