@@ -99,6 +99,7 @@ func OpenDB() (*sql.DB, error) {
 			symbolsMap[tick] = &sym
 		}
 	} else {
+		myDB.Close()
 		myDB = nil
 		return nil, err
 	}
@@ -127,6 +128,9 @@ func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 	si, err := GetSymbolInfo(sym)
 	if err != nil {
 		fmt.Println("GetSymbolInfo err", err)
+		return
+	}
+	if myDB == nil {
 		return
 	}
 	dMulti := digitMulti(si.PriceDigits)

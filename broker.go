@@ -92,7 +92,7 @@ type OrderType struct {
 }
 
 type PositionType struct {
-	Symbol    string
+	fKey      SymbolKey
 	Positions int
 	PosFreeze int
 	AvgPrice  float64 // average price for position

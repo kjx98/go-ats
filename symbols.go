@@ -57,7 +57,7 @@ type SymbolInfo struct {
 	Ticker string
 	*symbolBase
 	deliverMonth int
-	fKey         int
+	fKey         SymbolKey
 	Upper        float64
 	Lower        float64
 	quote        Quotes
@@ -65,7 +65,7 @@ type SymbolInfo struct {
 
 // fastKey for internal
 func (s *SymbolInfo) FastKey() SymbolKey {
-	return SymbolKey(s.fKey)
+	return s.fKey
 }
 
 func (s *SymbolInfo) Digits() int {
@@ -443,7 +443,7 @@ func newSymbolInfo(sym string) {
 
 		symIdx := nInstruments
 		nInstruments++
-		symInfo.fKey = nInstruments
+		symInfo.fKey = SymbolKey(nInstruments)
 
 		symInfoCaches = append(symInfoCaches, symInfo)
 		symInfos[sym] = &symInfoCaches[symIdx]

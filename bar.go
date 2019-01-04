@@ -136,7 +136,7 @@ func getBarCacheHash(fKey int, period Period) int {
 //	Daily for daily/weekly/monthly
 func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error {
 	si, err := GetSymbolInfo(sym)
-	if err != nil || si.fKey != int(b.symKey) {
+	if err != nil || si.fKey != b.symKey {
 		return invalidSymbol
 	}
 	if len(b.Date) == 0 {
@@ -226,7 +226,7 @@ func getBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err erro
 		err = invalidSymbol
 		return
 	}
-	res, err = getBarsByKey(si.fKey, period, curTime)
+	res, err = getBarsByKey(int(si.fKey), period, curTime)
 	return
 }
 

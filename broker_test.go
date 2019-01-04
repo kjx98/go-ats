@@ -34,6 +34,7 @@ func Test_OpenBroker(t *testing.T) {
 		ch   chan<- QuoteEvent
 	}
 	ch := make(chan QuoteEvent)
+	siBroker := simBroker(1)
 	tests := []struct {
 		name    string
 		args    args
@@ -41,7 +42,7 @@ func Test_OpenBroker(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"openBroker1", args{"simBroker", ch}, simTrader, false},
+		{"openBroker1", args{"simBroker", ch}, siBroker, false},
 		{"openBroker2", args{"simBroker2", ch}, nil, true},
 	}
 
@@ -50,6 +51,9 @@ func Test_OpenBroker(t *testing.T) {
 			got, err := openBroker(tt.args.name, tt.args.ch)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("openBroker() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {

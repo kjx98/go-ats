@@ -31,7 +31,7 @@ type account struct {
 
 	evChan chan<- QuoteEvent
 	orders []int
-	pos    []PositionType
+	pos    map[SymbolKey]*PositionType
 }
 
 type simOrderType struct {
@@ -198,7 +198,7 @@ var timeAtMaxAlloc DateTimeMs
 var onceLoad sync.Once
 
 // simSymbolQ symbol fKey map
-var simSymbolsQ = map[int]*Quotes{}
+var simSymbolsQ = map[SymbolKey]*Quotes{}
 
 // orderBook map with symbol key
 var simOrderBook = map[string]orderBook{}
@@ -278,8 +278,10 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 
 	var acct = account{evChan: ch, fundStart: defaultFund, fund: defaultFund,
 		equity: defaultFund, balance: defaultFund}
-	bb := simBroker(nAccounts)
 	nAccounts++
+	//simAccounts is map
+	bb := simBroker(nAccounts)
+
 	simAccounts[bb] = &acct
 	return bb, nil
 }
@@ -676,19 +678,29 @@ func (b simBroker) GetOrders() []int {
 }
 
 func (b simBroker) GetPosition(sym string) (vPos PositionType) {
+	si, err := GetSymbolInfo(sym)
+	if err != nil {
+		return
+	}
 	acct := simAccounts[b]
-	for _, v := range acct.pos {
-		if v.Symbol == sym {
-			vPos = v
-			return
-		}
+	if v, ok := acct.pos[si.fKey]; ok {
+		vPos = *v
 	}
 	return
 }
 
-func (b simBroker) GetPositions() []PositionType {
+func (b simBroker) GetPositions() (res []PositionType) {
 	acct := simAccounts[b]
-	return acct.pos
+	if len(acct.pos) == 0 {
+		return
+	}
+	res = make([]PositionType, len(acct.pos))
+	i := 0
+	for _, v := range acct.pos {
+		res[i] = *v
+		i++
+	}
+	return
 }
 
 //go:noinline

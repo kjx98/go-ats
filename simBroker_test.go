@@ -23,9 +23,15 @@ func TestLoadRunTick(t *testing.T) {
 		{"LoadRunTick-ETF", args{"sh510500"}, 5648, false},
 		{"LoadRunTick-601318", args{"sh601318"}, 11268, false},
 	}
-	if noDukasData || len(symbolsMap) == 0 {
+	if noDukasData {
 		t.Log("no tickData")
 		return
+	}
+	if len(symbolsMap) == 0 {
+		tests[4].want = 0
+		tests[4].wantErr = true
+		tests[5].want = 0
+		tests[5].wantErr = true
 	}
 	simLoadSymbols()
 	for _, tt := range tests {
@@ -35,7 +41,7 @@ func TestLoadRunTick(t *testing.T) {
 				t.Errorf("LoadRunTick() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got.Len(), tt.want) {
+			if err == nil && !reflect.DeepEqual(got.Len(), tt.want) {
 				t.Errorf("LoadRunTick() = %d, want %d", got.Len(), tt.want)
 			}
 		})
@@ -59,9 +65,13 @@ func TestValidateTick(t *testing.T) {
 		{"LoadRunTick-ETF", args{"sh510500"}, false},
 		{"LoadRunTick-601318", args{"sh601318"}, false},
 	}
-	if noDukasData || len(symbolsMap) == 0 {
+	if noDukasData {
 		t.Log("no tickData")
 		return
+	}
+	if len(symbolsMap) == 0 {
+		tests[4].wantErr = true
+		tests[5].wantErr = true
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -107,7 +117,7 @@ func Test_simBroker_SendOrder(t *testing.T) {
 		{"SendOrder5", b, args{"EURUSD", OrderDirSell, 1, 1.1362, 0}, 5},
 		{"SendOrder6", b, args{"EURUSD", OrderDirSell, 2, 1.1365, 0}, 6},
 	}
-	if noDukasData || len(symbolsMap) == 0 {
+	if noDukasData {
 		t.Log("no tickData")
 		return
 	}
@@ -149,7 +159,7 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 		{"CancelOrder5", b, args{5}, true},
 		{"CancelOrder6", b, args{4}, false},
 	}
-	if noDukasData || len(symbolsMap) == 0 {
+	if noDukasData {
 		t.Log("no tickData")
 		return
 	}
