@@ -201,7 +201,7 @@ var onceLoad sync.Once
 var simSymbolsQ = map[int]*Quotes{}
 
 // orderBook map with symbol key
-var simOrderBook map[string]orderBook
+var simOrderBook = map[string]orderBook{}
 
 const (
 	VmIdle int32 = iota
@@ -214,6 +214,8 @@ var (
 	vmStatusErr     = errors.New("simBroker VM status error")
 	errTickNonExist = errors.New("Tick Data not exist")
 	errTickOrder    = errors.New("Tick Data order error")
+	errNoOrder      = errors.New("No such order")
+	errCancelOrder  = errors.New("can't cancel,canceled or filled")
 )
 
 func simInsertOrder(or *simOrderType) {
@@ -221,6 +223,7 @@ func simInsertOrder(or *simOrderType) {
 	if !ok {
 		orBook.bids = avl.New(bidCompare)
 		orBook.asks = avl.New(askCompare)
+		simOrderBook[or.Symbol] = orBook
 	}
 	if or.OrderType.Dir.Sign() > 0 {
 		// bid
@@ -241,6 +244,29 @@ func simRemoveOrder(or *simOrderType) {
 				orBook.asks.Remove(v)
 			}
 		}
+	}
+}
+
+func dumpOrderBook(sym string) {
+	if orB, ok := simOrderBook[sym]; !ok {
+		log.Info("no OrderBook for ", sym)
+		return
+	} else {
+		log.Infof("Dump %s bids:", sym)
+		iter := orB.bids.Iterator(avl.Forward)
+		for node := iter.First(); node != nil; node = iter.Next() {
+			v := node.Value.(*simOrderType)
+			log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+				v.OrderType.Dir, v.Price, v.Qty)
+		}
+		log.Infof("Dump %s asks:", sym)
+		iter = orB.asks.Iterator(avl.Forward)
+		for node := iter.First(); node != nil; node = iter.Next() {
+			v := node.Value.(*simOrderType)
+			log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+				v.OrderType.Dir, v.Price, v.Qty)
+		}
+
 	}
 }
 
@@ -573,24 +599,30 @@ func simOrderInAcct(acct *account, oid int) bool {
 	return true
 }
 
-func (b simBroker) CancelOrder(oid int) {
+func (b simBroker) CancelOrder(oid int) error {
 	acct := simAccounts[b]
 	if oid > orderNo {
-		return
+		return errNoOrder
 	}
 	if !simOrderInAcct(acct, oid) {
 		// no such order
-		return
+		return errNoOrder
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
 	// remove order from orderbook
 	if or, ok := simOrders[oid]; !ok {
-		return
+		return errNoOrder
 	} else {
-		simRemoveOrder(or)
-		or.OrderType.Status = OrderCanceled
+		switch or.OrderType.Status {
+		case OrderFilled, OrderCanceled:
+			return errCancelOrder
+		default:
+			simRemoveOrder(or)
+			or.OrderType.Status = OrderCanceled
+		}
 	}
+	return nil
 }
 
 func (b simBroker) CloseOrder(oId int) {

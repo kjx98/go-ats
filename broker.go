@@ -109,7 +109,7 @@ type Broker interface {
 	Cash() float64                                                                // available free cash
 	FreeMargin() float64                                                          // availble free margin
 	SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int // return oId >=0 on success
-	CancelOrder(oid int)                                                          // Cancel Order
+	CancelOrder(oid int) error                                                    // Cancel Order
 	CloseOrder(oId int)
 	GetOrder(oId int) *OrderType
 	GetOrders() []int

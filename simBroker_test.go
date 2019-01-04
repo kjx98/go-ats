@@ -71,3 +71,94 @@ func TestValidateTick(t *testing.T) {
 		})
 	}
 }
+
+var b simBroker = -1
+
+func Test_simBroker_SendOrder(t *testing.T) {
+	type args struct {
+		sym   string
+		dir   OrderDirT
+		qty   int
+		prc   float64
+		stopL float64
+	}
+	if b < 0 {
+		evCh := make(chan QuoteEvent)
+		defer close(evCh)
+		if bb, err := simTrader.Open(evCh); err != nil {
+			t.Error("simBroker Open", err)
+			return
+		} else {
+			b = bb.(simBroker)
+		}
+	}
+
+	tests := []struct {
+		name string
+		b    simBroker
+		args args
+		want int
+	}{
+		// TODO: Add test cases.
+		{"SendOrder1", b, args{"EURUSD", OrderDirBuy, 1, 1.1355, 0}, 1},
+		{"SendOrder2", b, args{"EURUSD", OrderDirBuy, 1, 1.1358, 0}, 2},
+		{"SendOrder3", b, args{"EURUSD", OrderDirBuy, 2, 1.1355, 0}, 3},
+		{"SendOrder4", b, args{"EURUSD", OrderDirSell, 1, 1.1365, 0}, 4},
+		{"SendOrder5", b, args{"EURUSD", OrderDirSell, 1, 1.1362, 0}, 5},
+		{"SendOrder6", b, args{"EURUSD", OrderDirSell, 2, 1.1365, 0}, 6},
+	}
+	if noDukasData || len(symbolsMap) == 0 {
+		t.Log("no tickData")
+		return
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.b.SendOrder(tt.args.sym, tt.args.dir, tt.args.qty, tt.args.prc, tt.args.stopL); got != tt.want {
+				t.Errorf("simBroker.SendOrder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+	dumpOrderBook("EURUSD")
+}
+
+func Test_simBroker_CancelOrder(t *testing.T) {
+	type args struct {
+		oid int
+	}
+	if b < 0 {
+		evCh := make(chan QuoteEvent)
+		defer close(evCh)
+		if bb, err := simTrader.Open(evCh); err != nil {
+			t.Error("simBroker Open", err)
+			return
+		} else {
+			b = bb.(simBroker)
+		}
+	}
+	tests := []struct {
+		name    string
+		b       simBroker
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{"CancelOrder1", b, args{1}, false},
+		{"CancelOrder2", b, args{0}, true},
+		{"CancelOrder3", b, args{1}, true},
+		{"CancelOrder4", b, args{5}, false},
+		{"CancelOrder5", b, args{5}, true},
+		{"CancelOrder6", b, args{4}, false},
+	}
+	if noDukasData || len(symbolsMap) == 0 {
+		t.Log("no tickData")
+		return
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.b.CancelOrder(tt.args.oid); (err != nil) != tt.wantErr {
+				t.Errorf("simBroker.CancelOrder() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+	dumpOrderBook("EURUSD")
+}
