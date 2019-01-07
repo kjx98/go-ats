@@ -16,7 +16,8 @@ func TestLoadRunTick(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
+		//{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
+		{"LoadRunTick-EUR", args{"EURUSD"}, 53803847, false},
 		{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
 		{"LoadRunTick-JPY", args{"USDJPY"}, 2126252, false},
 		{"LoadRunTick-XAU", args{"XAUUSD"}, 2009644, false},

@@ -360,76 +360,88 @@ func forgeTicks(si *SymbolInfo) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
 		if si.IsForex {
 			var tickD = simTickFX{}
+			tickD.ticks = make([]TickFX, cc.Len()*4)
+			j := 0
 			for i := 0; i < cc.Len(); i++ {
-				var atick TickFX
+				var atick *TickFX
 				ti, o, h, l, c, _ := cc.BarValue(i)
+				atick = &tickD.ticks[j]
+				j++
 				atick.Time = ti.DateTimeMs()
 				atick.Bid = o
 				atick.Ask = o + si.DefSpread
-				tickD.ticks = append(tickD.ticks, atick)
+				atick = &tickD.ticks[j]
+				j++
 				hto := r.Int63() % int64(period)
 				lto := r.Int63() % int64(period)
 				if hto > lto {
 					atick.Time = (ti + timeT64(lto)).DateTimeMs()
 					atick.Bid = l
 					atick.Ask = l + si.DefSpread
-					tickD.ticks = append(tickD.ticks, atick)
+					atick = &tickD.ticks[j]
+					j++
 					atick.Time = (ti + timeT64(hto)).DateTimeMs()
 					atick.Bid = h
 					atick.Ask = h + si.DefSpread
-					tickD.ticks = append(tickD.ticks, atick)
 				} else {
 					atick.Time = (ti + timeT64(hto)).DateTimeMs()
 					atick.Bid = h
 					atick.Ask = h + si.DefSpread
-					tickD.ticks = append(tickD.ticks, atick)
+					atick = &tickD.ticks[j]
+					j++
 					atick.Time = (ti + timeT64(lto)).DateTimeMs()
 					atick.Bid = l
 					atick.Ask = l + si.DefSpread
-					tickD.ticks = append(tickD.ticks, atick)
 				}
 				// last for close
+				atick = &tickD.ticks[j]
+				j++
 				atick.Time = (ti + timeT64(period)).DateTimeMs() - 1
 				atick.Bid = c
 				atick.Ask = c + si.DefSpread
-				tickD.ticks = append(tickD.ticks, atick)
 			}
 			simTickMap[si.FastKey()] = &tickD
 		} else {
 			var tickD = simTick{}
+			tickD.ticks = make([]Tick, cc.Len()*4)
+			j := 0
 			for i := 0; i < cc.Len(); i++ {
-				var atick Tick
+				var atick *Tick
 				ti, o, h, l, c, vol := cc.BarValue(i)
+				atick = &tickD.ticks[j]
+				j++
 				atick.Time = timeT32(ti)
 				atick.Last = o
 				atick.Volume = uint32(vol * 3 / 8)
-				tickD.ticks = append(tickD.ticks, atick)
+				atick = &tickD.ticks[j]
+				j++
 				hto := r.Int63() % int64(period)
 				lto := r.Int63() % int64(period)
 				if hto > lto {
 					atick.Time = timeT32(ti + timeT64(lto))
 					atick.Last = l
 					atick.Volume = uint32(vol / 8)
-					tickD.ticks = append(tickD.ticks, atick)
+					atick = &tickD.ticks[j]
+					j++
 					atick.Time = timeT32(ti + timeT64(hto))
 					atick.Last = h
 					atick.Volume = uint32(vol / 8)
-					tickD.ticks = append(tickD.ticks, atick)
 				} else {
 					atick.Time = timeT32(ti + timeT64(hto))
 					atick.Last = h
 					atick.Volume = uint32(vol / 8)
-					tickD.ticks = append(tickD.ticks, atick)
+					atick = &tickD.ticks[j]
+					j++
 					atick.Time = timeT32(ti + timeT64(lto))
 					atick.Last = l
 					atick.Volume = uint32(vol / 8)
-					tickD.ticks = append(tickD.ticks, atick)
 				}
 				// last for close
+				atick = &tickD.ticks[j]
+				j++
 				atick.Time = timeT32(ti+timeT64(period)) - 1
 				atick.Last = c
 				atick.Volume = uint32(vol * 3 / 8)
-				tickD.ticks = append(tickD.ticks, atick)
 			}
 			simTickMap[si.FastKey()] = &tickD
 		}
