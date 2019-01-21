@@ -61,14 +61,14 @@ func (sti *simTick) Len() int {
 
 func (sti *simTick) Time() DateTimeMs {
 	curP := sti.curP
-	if curP > len(sti.ticks) {
+	if curP >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[curP].Time.DateTimeMs()
 }
 
 func (sti *simTick) TimeAt(i int) DateTimeMs {
-	if i > len(sti.ticks) {
+	if i >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[i].Time.DateTimeMs()
@@ -76,7 +76,7 @@ func (sti *simTick) TimeAt(i int) DateTimeMs {
 
 func (sti *simTick) TickValue() (bid, ask, last int32, vol uint32) {
 	curP := sti.curP
-	if curP > len(sti.ticks) {
+	if curP >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return 0, 0, sti.ticks[curP].Last, sti.ticks[curP].Volume
@@ -96,14 +96,14 @@ func (sti *simTickFX) Len() int {
 
 func (sti *simTickFX) Time() DateTimeMs {
 	curP := sti.curP
-	if curP > len(sti.ticks) {
+	if curP >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[curP].Time
 }
 
 func (sti *simTickFX) TimeAt(i int) DateTimeMs {
-	if i > len(sti.ticks) {
+	if i >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[i].Time
@@ -111,7 +111,7 @@ func (sti *simTickFX) TimeAt(i int) DateTimeMs {
 
 func (sti *simTickFX) TickValue() (bid, ask, last int32, vol uint32) {
 	curP := sti.curP
-	if curP > len(sti.ticks) {
+	if curP >= len(sti.ticks) {
 		panic("Out of simTick bound")
 	}
 	return sti.ticks[curP].Bid, sti.ticks[curP].Ask, 0, 0
@@ -192,9 +192,10 @@ var simTickRun map[SymbolKey]simTicker
 
 // simStatus should be atomic
 var simStatus int32
-var maxAllocHeap uint64
-var maxSysHeap uint64
-var timeAtMaxAlloc DateTimeMs
+
+//var maxAllocHeap uint64
+//var maxSysHeap uint64
+//var timeAtMaxAlloc DateTimeMs
 var onceLoad sync.Once
 
 // simSymbolQ symbol fKey map
@@ -506,14 +507,43 @@ func (b simBroker) Start(c Config) error {
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
-	maxAllocHeap = 0
-	maxSysHeap = 0
-	timeAtMaxAlloc = 0
+	//maxAllocHeap = 0
+	//maxSysHeap = 0
+	//timeAtMaxAlloc = 0
 	atomic.StoreInt32(&simStatus, VmStart)
 	// load Bars
 	// build ticks
 	simLoadSymbols()
+	startMs := DateTimeMs(0)
+	msStart := startTime.DateTimeMs()
+	//msEnd := endTime.DateTimeMs()
+	// try get the first tick datetime
+	for k, v := range simTickRun {
+		// skip to msStart
+		for i := 0; i < v.Len(); i++ {
+			if v.Time() >= msStart {
+				if startMs == 0 || v.Time() < startMs {
+					startMs = v.Time()
+				}
+				break
+			}
+			if v.Next() != nil {
+				break
+			}
+		}
+		if v.Time() < msStart {
+			si, _ := k.SymbolInfo()
+			log.Infof("delete simTickRun for symbol(%s)", si.Ticker)
+			delete(simTickRun, k)
+		}
+	}
+	if len(simTickRun) == 0 {
+		log.Info("Empty simTickRun, status to Idle")
+		atomic.StoreInt32(&simStatus, VmIdle)
+		return nil
+	}
 	// start Tick feed goroutine
+	simCurrent = startMs
 	// always run tick
 	/*
 		if c.GetInt("RunTick", 0) != 0 {
