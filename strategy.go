@@ -8,13 +8,14 @@ type Parameter struct {
 	Value interface{}
 }
 
+// Context ... context store broker and  config
 type Context struct {
 	Broker
 	Config
 	GetBars func(sym string, period Period) (res *Bars, err error)
 }
 
-// universe of Strategyer should never intersection
+// Strategyer ...	universe of Strategyer should never intersection
 // one symbol/ticker can only be processed by one Strategyer
 // 		Context.Config items   "Universe":[]string, "Param":[]float64
 type Strategyer interface {
@@ -25,9 +26,9 @@ type Strategyer interface {
 	DeInit()                             // Destroy interface/state
 }
 
-var stratExist = errors.New("Strategy registered")
-var stratNotExist = errors.New("Strategy not registered")
-var stratsMap map[string]Strategyer = map[string]Strategyer{}
+var errStratExist = errors.New("Strategy registered")
+var errStratNotExist = errors.New("Strategy not registered")
+var stratsMap = map[string]Strategyer{}
 
 func (c *Context) stratGetBars(sym string, period Period) (*Bars, error) {
 	return getBars(sym, period, c.TimeCurrent())
@@ -42,7 +43,7 @@ func newContext(br Broker) *Context {
 // RegisterStrategy should be called from init()
 func RegisterStrategy(name string, inf Strategyer) error {
 	if _, ok := stratsMap[name]; ok {
-		return stratExist
+		return errStratExist
 	}
 	stratsMap[name] = inf
 	return nil
@@ -52,5 +53,5 @@ func loadStrategy(name string) (Strategyer, error) {
 	if b, ok := stratsMap[name]; ok {
 		return b, nil
 	}
-	return nil, brokerNotExist
+	return nil, errBrokerNotExist
 }

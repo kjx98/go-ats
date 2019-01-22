@@ -23,6 +23,7 @@ type TaSeries interface {
 	BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64)
 }
 
+// NewSlice ... build slice from Series
 func NewSlice(s Series) (res []float64) {
 	if s.Len() <= 0 {
 		return

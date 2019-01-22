@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	MaxInstruments int = 4096
+	maxInstruments int = 4096
 )
 
 // Market  Exchange/combo national markets
@@ -49,6 +49,7 @@ type symbolBase struct {
 	bMargin        bool
 }
 
+// SymbolKey ... fast key for symbol, based from 1
 type SymbolKey int
 
 // SymbolInfo symbol traits of instrument
@@ -63,7 +64,7 @@ type SymbolInfo struct {
 	quote        Quotes
 }
 
-// fastKey for internal
+// FastKey for internal
 func (s *SymbolInfo) FastKey() SymbolKey {
 	return s.fKey
 }
@@ -80,7 +81,7 @@ func (s *SymbolInfo) Multi() float64 {
 	return digitMulti(s.PriceDigits)
 }
 
-// normal Price for order
+// PriceNormal normal Price for order
 func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	p = math.Floor(p/s.PriceStep) * s.PriceStep
 	if p < s.Lower {
@@ -91,7 +92,7 @@ func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	return p
 }
 
-// return quotes for symbol
+// GetQuotes return quotes for symbol
 func (s *SymbolInfo) GetQuotes() Quotes {
 	return s.quote
 }
@@ -101,7 +102,7 @@ func (s *SymbolInfo) getQuotesPtr() *Quotes {
 	return &s.quote
 }
 
-// calc order quantity according to price and value amount in full margin
+// CalcVolume calc order quantity according to price and value amount in full margin
 func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	if s.LotSize > 0 {
 		p *= float64(s.LotSize)
@@ -128,7 +129,7 @@ func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	return res
 }
 
-// calc order quantity according to price and value amount according to margin
+// CalcRiskVolume ... calc order quantity according to price and value amount according to margin
 func (s *SymbolInfo) CalcRiskVolume(amt float64, riskPrice float64) float64 {
 	if s.LotSize > 0 {
 		riskPrice *= float64(s.LotSize)
@@ -330,20 +331,20 @@ var initTemp = symbolTemps{
 var symInfos = map[string]*SymbolInfo{}
 var symInfoCaches = []SymbolInfo{}
 var usDeliverMonth = " FGHJKMNQUVXZ"
-var noSuchSymbol = errors.New("no such symbol")
+var errNoSuchSymbol = errors.New("no such symbol")
 var initTicks = map[string]tickConf{}
 
 func GetSymbolInfo(sym string) (SymbolInfo, error) {
 	if res, ok := symInfos[sym]; ok {
 		return *res, nil
 	}
-	return SymbolInfo{}, noSuchSymbol
+	return SymbolInfo{}, errNoSuchSymbol
 }
 
 func (fkey SymbolKey) SymbolInfo() (SymbolInfo, error) {
 	idx := int(fkey)
 	if idx <= 0 || idx > len(symInfoCaches) {
-		return SymbolInfo{}, noSuchSymbol
+		return SymbolInfo{}, errNoSuchSymbol
 	}
 	return symInfoCaches[idx-1], nil
 }
@@ -363,7 +364,7 @@ func newSymbolInfo(sym string) {
 		return
 	}
 	// maxium instruments reach, no more instrument add
-	if nInstruments == MaxInstruments {
+	if nInstruments == maxInstruments {
 		return
 	}
 	instRWlock.RUnlock()
@@ -395,12 +396,12 @@ func newSymbolInfo(sym string) {
 			if sym[sLen-1] < '0' || sym[sLen-1] > '9' {
 				continue
 			}
-			if mon := strings.IndexByte(usDeliverMonth, sym[sLen-2]); mon < 0 {
+			mon := strings.IndexByte(usDeliverMonth, sym[sLen-2])
+			if mon < 0 {
 				// deliver Month no exist
 				return
-			} else {
-				symInfo.deliverMonth = mon
 			}
+			symInfo.deliverMonth = mon
 		case 3:
 			if sLen < 4 {
 				continue

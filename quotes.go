@@ -1,6 +1,6 @@
 package ats
 
-// No Level2 quotes yet
+// Quotes ... No Level2 quotes yet
 type Quotes struct {
 	UpdateTime DateTimeMs
 	TodayOpen  float64
@@ -16,16 +16,17 @@ type Quotes struct {
 	AskVol     int64
 }
 
+// QuoteSubT ... subscribe quote struct
 type QuoteSubT struct {
 	Symbol    string
 	QuotesPtr *Quotes
 }
 
 // QuoteEvent used by broker to notify quote/tick/bar update
-// EventId    0   for quote/tick update, else bar period
+// EventID    0   for quote/tick update, else bar period
 type QuoteEvent struct {
 	Symbol  string
-	EventId int
+	EventID int
 }
 
 // no export func for update quotes

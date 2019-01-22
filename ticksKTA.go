@@ -5,6 +5,7 @@ import (
 	"unsafe"
 )
 
+// TickHead ... used only for encode/decode
 type TickHead struct {
 	Time    timeT32 // timeStamp Base, timeT32 for first tick
 	BaseP   int32   // BasePrice, Last for first tick or pclose
@@ -56,7 +57,7 @@ var errTickLast = errors.New("Tick lastDelta too large")
 var errTickBid = errors.New("Tick BidDelta too large")
 var errTickAsk = errors.New("Tick AskDelta too large")
 
-// (* TickHead) EncodeTick([]Tick) ([]byte, error)
+// EncodeTick (* TickHead) EncodeTick([]Tick) ([]byte, error)
 //	Encode/Compress Tick Slice to byte slice
 func (tickHd *TickHead) EncodeTick(ticks []Tick) (buf []byte, err error) {
 	nTicks := len(ticks)
@@ -143,7 +144,7 @@ func (tickHd *TickHead) EncodeTick(ticks []Tick) (buf []byte, err error) {
 	return
 }
 
-// (* TickHead) EncodeTickExt([]TickExt) ([]byte, error)
+// EncodeTickExt  (* TickHead) EncodeTickExt([]TickExt) ([]byte, error)
 //	Encode/Compress TickExt Slice to byte slice
 func (tickHd *TickHead) EncodeTickExt(ticks []TickExt) (buf []byte, err error) {
 	nTicks := len(ticks)
@@ -298,7 +299,7 @@ func (tickHd *TickHead) EncodeTickExt(ticks []TickExt) (buf []byte, err error) {
 	return
 }
 
-// (* TickHead) EncodeMinTA([]MinTA) ([]byte, error)
+// EncodeMinTA (* TickHead) EncodeMinTA([]MinTA) ([]byte, error)
 //	Encode/Compress MinTA Slice to byte slice
 func (tickHd *TickHead) EncodeMinTA(mins []MinTA) (buf []byte, err error) {
 	nTicks := len(mins)
@@ -437,7 +438,7 @@ func ckBufLen(off, cnt, bLen int, ss string) (err error) {
 	return
 }
 
-// (* TickHead) DecodeTick([]Byte) ([]Tick, error)
+// DecodeTick ... (* TickHead) DecodeTick([]Byte) ([]Tick, error)
 //	Decode/DeCompress Tick Slice to byte slice
 func (tickHd *TickHead) DecodeTick(buf []byte) (ticks []Tick, err error) {
 	bLen := len(buf)
@@ -547,7 +548,7 @@ func (tickHd *TickHead) DecodeTick(buf []byte) (ticks []Tick, err error) {
 	return
 }
 
-// (* TickHead) DecodeTickExt([]Byte) ([]TickExt, error)
+// DecodeTickExt ...  (* TickHead) DecodeTickExt([]Byte) ([]TickExt, error)
 //	Decode/DeCompress TickExt Slice to byte slice
 func (tickHd *TickHead) DecodeTickExt(buf []byte) (ticks []TickExt, err error) {
 	bLen := len(buf)
@@ -718,7 +719,7 @@ func (tickHd *TickHead) DecodeTickExt(buf []byte) (ticks []TickExt, err error) {
 	return
 }
 
-// (* TickHead) DecodeMinTA([]Byte) ([]MinTA, error)
+// DecodeMinTA ... (* TickHead) DecodeMinTA([]Byte) ([]MinTA, error)
 //	Decode/DeCompress MinTA Slice to byte slice
 func (tickHd *TickHead) DecodeMinTA(buf []byte) (ticks []MinTA, err error) {
 	bLen := len(buf)

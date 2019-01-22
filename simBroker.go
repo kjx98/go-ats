@@ -173,13 +173,14 @@ func askCompare(a, b interface{}) int {
 	return int(ora.price) - int(orb.price)
 }
 
-var defaultFund float64 = 1e6
 var acctLock sync.RWMutex
 var nAccounts int
 var simAccounts = map[simBroker]*account{}
 var orderLock sync.RWMutex
 var orderNo int
 var simOrders = map[int]*simOrderType{}
+
+var defaultFund = float64(1e6)
 
 // sim Run start/stop time
 var startTime, endTime timeT64
@@ -204,6 +205,7 @@ var simSymbolsQ = map[SymbolKey]*Quotes{}
 // orderBook map with symbol key
 var simOrderBook = map[string]orderBook{}
 
+// VmIdle ... vm is idle
 const (
 	VmIdle int32 = iota
 	VmStart
@@ -212,12 +214,21 @@ const (
 )
 
 var (
-	vmStatusErr     = errors.New("simBroker VM status error")
+	errVmStatus     = errors.New("simBroker VM status error")
 	errTickNonExist = errors.New("Tick Data not exist")
 	errTickOrder    = errors.New("Tick Data order error")
 	errNoOrder      = errors.New("No such order")
 	errCancelOrder  = errors.New("can't cancel,canceled or filled")
 )
+
+// InitSimBroker ... set default fund, startTime, endTime  etc
+func InitSimBroker(startT, endT time.Time, defFund float64) {
+	startTime = timeT64FromTime(startT)
+	endTime = timeT64FromTime(endT)
+	if defFund > 10000 {
+		defaultFund = defFund
+	}
+}
 
 func simInsertOrder(or *simOrderType) {
 	orBook, ok := simOrderBook[or.Symbol]
@@ -249,26 +260,26 @@ func simRemoveOrder(or *simOrderType) {
 }
 
 func dumpOrderBook(sym string) {
-	if orB, ok := simOrderBook[sym]; !ok {
+	orB, ok := simOrderBook[sym]
+	if !ok {
 		log.Info("no OrderBook for ", sym)
 		return
-	} else {
-		log.Infof("Dump %s bids:", sym)
-		iter := orB.bids.Iterator(avl.Forward)
-		for node := iter.First(); node != nil; node = iter.Next() {
-			v := node.Value.(*simOrderType)
-			log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
-				v.OrderType.Dir, v.Price, v.Qty)
-		}
-		log.Infof("Dump %s asks:", sym)
-		iter = orB.asks.Iterator(avl.Forward)
-		for node := iter.First(); node != nil; node = iter.Next() {
-			v := node.Value.(*simOrderType)
-			log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
-				v.OrderType.Dir, v.Price, v.Qty)
-		}
-
 	}
+	log.Infof("Dump %s bids:", sym)
+	iter := orB.bids.Iterator(avl.Forward)
+	for node := iter.First(); node != nil; node = iter.Next() {
+		v := node.Value.(*simOrderType)
+		log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+			v.OrderType.Dir, v.Price, v.Qty)
+	}
+	log.Infof("Dump %s asks:", sym)
+	iter = orB.asks.Iterator(avl.Forward)
+	for node := iter.First(); node != nil; node = iter.Next() {
+		v := node.Value.(*simOrderType)
+		log.Infof(" No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+			v.OrderType.Dir, v.Price, v.Qty)
+	}
+
 }
 
 type simBroker int
@@ -467,7 +478,8 @@ func forgeTicks(si *SymbolInfo) {
 	}
 }
 
-func LoadRunTick(sym string) (simTicker, error) {
+// loadRunTick ... load Tick data from simTickRun
+func loadRunTick(sym string) (simTicker, error) {
 	if si, err := GetSymbolInfo(sym); err != nil {
 		return nil, err
 	} else if v, ok := simTickRun[si.FastKey()]; ok {
@@ -476,17 +488,20 @@ func LoadRunTick(sym string) (simTicker, error) {
 	return nil, errTickNonExist
 }
 
+// ValidateTick ... validate tick data timestamp in order
 func ValidateTick(sym string) error {
 	if si, err := GetSymbolInfo(sym); err != nil {
 		return err
 	} else if v, ok := simTickMap[si.FastKey()]; ok {
 		var oldTi DateTimeMs
 		for i := 0; i < v.Len(); i++ {
-			if ti := v.TimeAt(i); ti < oldTi {
-				return errTickOrder
-			} else {
+
+			if ti := v.TimeAt(i); ti >= oldTi {
 				oldTi = ti
+			} else {
+				return errTickOrder
 			}
+
 		}
 	} else {
 		return errTickNonExist
@@ -503,7 +518,7 @@ func (b simBroker) Start(c Config) error {
 	case VmStart, VmRunning:
 		return nil
 	default:
-		return vmStatusErr
+		return errVmStatus
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
@@ -563,7 +578,7 @@ func (b simBroker) Stop() error {
 		return nil
 	case VmRunning:
 	default:
-		return vmStatusErr
+		return errVmStatus
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
@@ -575,7 +590,7 @@ func (b simBroker) Stop() error {
 
 func (b simBroker) SubscribeQuotes(qq []QuoteSubT) error {
 	if atomic.LoadInt32(&simStatus) != VmIdle {
-		return vmStatusErr
+		return errVmStatus
 	}
 	// prepare Bars
 	// maybe Once load?
@@ -655,16 +670,16 @@ func (b simBroker) CancelOrder(oid int) error {
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
 	// remove order from orderbook
-	if or, ok := simOrders[oid]; !ok {
+	or, ok := simOrders[oid]
+	if !ok {
 		return errNoOrder
-	} else {
-		switch or.OrderType.Status {
-		case OrderFilled, OrderCanceled:
-			return errCancelOrder
-		default:
-			simRemoveOrder(or)
-			or.OrderType.Status = OrderCanceled
-		}
+	}
+	switch or.OrderType.Status {
+	case OrderFilled, OrderCanceled:
+		return errCancelOrder
+	default:
+		simRemoveOrder(or)
+		or.OrderType.Status = OrderCanceled
 	}
 	return nil
 }
@@ -684,24 +699,24 @@ func (b simBroker) CloseOrder(oId int) {
 	defer simVmLock.Unlock()
 	// if order open or partfill, changed to market order
 	// remove order from orderbook
-	if or, ok := simOrders[oId]; !ok {
+	or, ok := simOrders[oId]
+	if !ok {
 		return
-	} else {
-		simRemoveOrder(or)
-		switch or.OrderType.Status {
-		case OrderAccept, OrderPartFilled:
-			// change to market order
-			if or.OrderType.StopPrice != 0 {
-				or.OrderType.StopPrice = 0
-			}
-			or.OrderType.Price = 0
-			or.price = 0
-			simInsertOrder(or)
-		case OrderFilled:
-			// do nothing
-		default:
-			or.OrderType.Status = OrderCanceled
+	}
+	simRemoveOrder(or)
+	switch or.OrderType.Status {
+	case OrderAccept, OrderPartFilled:
+		// change to market order
+		if or.OrderType.StopPrice != 0 {
+			or.OrderType.StopPrice = 0
 		}
+		or.OrderType.Price = 0
+		or.price = 0
+		simInsertOrder(or)
+	case OrderFilled:
+		// do nothing
+	default:
+		or.OrderType.Status = OrderCanceled
 	}
 }
 

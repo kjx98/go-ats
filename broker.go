@@ -4,9 +4,13 @@ import (
 	"errors"
 )
 
-// OrderDir current only Buy/Sell, no hedge position
+// OrderDirT current only Buy/Sell, no hedge position
 type OrderDirT int32
 
+// OrderDirBuy ...	Buy long open
+// OrderDirSell ...	Sell short open
+// OrderDirCover ...	Buy cover short
+// OrderDirClose ...	Sell close long
 const (
 	OrderDirBuy OrderDirT = iota
 	OrderDirSell
@@ -14,15 +18,14 @@ const (
 	OrderDirClose
 )
 
-// Order Sign
+// Sign ...	for order dir
 //	return 1   for Buy
 //	return -1  for Sell
 func (orDir OrderDirT) Sign() int {
 	return (1 - 2*int(orDir&1))
 }
 
-// PosOffset
-//	return true for position close/offset
+// IsOffset ...	return true for position close/offset
 func (orDir OrderDirT) IsOffset() bool {
 	return orDir > OrderDirSell
 }
@@ -41,8 +44,10 @@ func (orDir OrderDirT) String() string {
 	return "NA"
 }
 
+// OrderStatusT ... order status
 type OrderStatusT int32
 
+// OrderNil ...	nil order
 const (
 	OrderNil OrderStatusT = iota
 	OrderNew
@@ -70,7 +75,7 @@ func (oSt OrderStatusT) String() string {
 	return "Invalid"
 }
 
-// Order struct
+// OrderType ... struct
 //	Symbol  order symbol
 //	Price	order price(or profit price if Stop not zero)
 //	StopPrice	StopLoss price
@@ -91,6 +96,7 @@ type OrderType struct {
 	AvgPrice  float64
 }
 
+// PositionType ...		position for symbol of account
 type PositionType struct {
 	fKey      SymbolKey
 	Positions int
@@ -98,6 +104,7 @@ type PositionType struct {
 	AvgPrice  float64 // average price for position
 }
 
+// Broker ...	interface for abstract broker
 type Broker interface {
 	Open(ch chan<- QuoteEvent) (Broker, error) // on success return interface pointer
 	Start(c Config) error                      // user/pwd, startDate/endDate ...
@@ -109,23 +116,24 @@ type Broker interface {
 	Cash() float64                                                                // available free cash
 	FreeMargin() float64                                                          // availble free margin
 	SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int // return oId >=0 on success
-	CancelOrder(oid int) error                                                    // Cancel Order
-	CloseOrder(oId int)
-	GetOrder(oId int) *OrderType
+	CancelOrder(oID int) error                                                    // Cancel Order
+	CloseOrder(oID int)
+	GetOrder(oID int) *OrderType
 	GetOrders() []int
 	GetPosition(sym string) PositionType
 	GetPositions() []PositionType
 	TimeCurrent() DateTimeMs // return current time of broker server in millisecond timestamp
 }
 
-var brokerExist = errors.New("Broker registered")
-var brokerNotExist = errors.New("Borker not registered")
-var brokers map[string]Broker = map[string]Broker{}
+var errBrokerExist = errors.New("Broker registered")
+var errBrokerNotExist = errors.New("Borker not registered")
+var brokers = map[string]Broker{}
 var defaultBroker = "simBroker"
 
+// RegisterBroker ... register broker with name
 func RegisterBroker(name string, inf Broker) error {
 	if _, ok := brokers[name]; ok {
-		return brokerExist
+		return errBrokerExist
 	}
 	brokers[name] = inf
 	return nil
@@ -138,5 +146,5 @@ func openBroker(name string, ch chan<- QuoteEvent) (Broker, error) {
 	if b, ok := brokers[name]; ok {
 		return b.Open(ch)
 	}
-	return nil, brokerNotExist
+	return nil, errBrokerNotExist
 }

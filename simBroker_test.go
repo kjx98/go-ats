@@ -37,7 +37,7 @@ func TestLoadRunTick(t *testing.T) {
 	simLoadSymbols()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LoadRunTick(tt.args.sym)
+			got, err := loadRunTick(tt.args.sym)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LoadRunTick() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -96,12 +96,12 @@ func Test_simBroker_SendOrder(t *testing.T) {
 	if b < 0 {
 		evCh := make(chan QuoteEvent)
 		defer close(evCh)
-		if bb, err := simTrader.Open(evCh); err != nil {
+		bb, err := simTrader.Open(evCh)
+		if err != nil {
 			t.Error("simBroker Open", err)
 			return
-		} else {
-			b = bb.(simBroker)
 		}
+		b = bb.(simBroker)
 	}
 
 	tests := []struct {
@@ -139,12 +139,12 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 	if b < 0 {
 		evCh := make(chan QuoteEvent)
 		defer close(evCh)
-		if bb, err := simTrader.Open(evCh); err != nil {
+		bb, err := simTrader.Open(evCh)
+		if err != nil {
 			t.Error("simBroker Open", err)
 			return
-		} else {
-			b = bb.(simBroker)
 		}
+		b = bb.(simBroker)
 	}
 	tests := []struct {
 		name    string

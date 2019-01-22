@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// seconds for Bar time interval
+// Period ...	seconds for Bar time interval
 type Period int32
 
 const (
@@ -20,7 +20,7 @@ const (
 	Min15 Period = 900
 	// Min30 - 30 Minute time period
 	Min30 Period = 1800
-	// Hour1/Min60 - 60 Minute time period
+	// Hour1 - 60 Minute time period
 	Hour1 Period = 3600
 	// Hour2 - 2 hour time period
 	Hour2 Period = 7200
@@ -50,7 +50,7 @@ type Bars struct {
 	Volume  []float64
 }
 
-// only cache for non basePeriod Bars
+// BarCache ...	only cache for non basePeriod Bars
 type BarCache struct {
 	loadTime   timeT64
 	lastAccess timeT64
@@ -58,9 +58,9 @@ type BarCache struct {
 	Bars
 }
 
-var invalidPeriod = errors.New("Invalid Period")
-var invalidSymbol = errors.New("Symbol not exist")
-var noCacheBase = errors.New("No cache base Bars")
+var errInvalidPeriod = errors.New("Invalid Period")
+var errInvalidSymbol = errors.New("Symbol not exist")
+var errNoCacheBase = errors.New("No cache base Bars")
 
 // cache for Min1/Min5 Base period Bars
 var minBarsBase []*Bars
@@ -108,6 +108,7 @@ func (b *Bars) String() string {
 		b.startDt.String(), b.endDt.String(), len(b.Date))
 }
 
+// RowString ...	convert row date to string
 func (b *Bars) RowString(idx int) string {
 	if idx < 0 || idx >= len(b.Date) {
 		return "OOB idx"
@@ -137,7 +138,7 @@ func getBarCacheHash(fKey int, period Period) int {
 func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error {
 	si, err := GetSymbolInfo(sym)
 	if err != nil || si.fKey != b.symKey {
-		return invalidSymbol
+		return errInvalidSymbol
 	}
 	if len(b.Date) == 0 {
 		return nil
@@ -160,7 +161,7 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error
 			dayBarsBase = nb
 		}
 	default:
-		return invalidPeriod
+		return errInvalidPeriod
 	}
 	if startDt == 0 || startDt > b.Date[0] {
 		startDt = b.Date[0]
@@ -223,7 +224,7 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 func getBars(sym string, period Period, curTime DateTimeMs) (res *Bars, err error) {
 	si, err := GetSymbolInfo(sym)
 	if si.fKey <= 0 {
-		err = invalidSymbol
+		err = errInvalidSymbol
 		return
 	}
 	res, err = getBarsByKey(int(si.fKey), period, curTime)
@@ -244,7 +245,7 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 	case Daily, Weekly, Monthly:
 		basePeriod = Daily
 	default:
-		err = invalidPeriod
+		err = errInvalidPeriod
 		return
 	}
 
@@ -252,23 +253,23 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 	switch basePeriod {
 	case Min5, Min1:
 		if fKey > len(minBarsBase) {
-			err = noCacheBase
+			err = errNoCacheBase
 			return
 		}
 		baseBars = minBarsBase[fKey-1]
 		if baseBars == nil || period < baseBars.period {
-			err = noCacheBase
+			err = errNoCacheBase
 			return
 		}
 		basePeriod = baseBars.period
 	case Daily:
 		if fKey > len(dayBarsBase) {
-			err = noCacheBase
+			err = errNoCacheBase
 			return
 		}
 		baseBars = dayBarsBase[fKey-1]
 		if baseBars == nil {
-			err = noCacheBase
+			err = errNoCacheBase
 			return
 		}
 	}
@@ -334,7 +335,7 @@ func periodBaseTime(t int64, period Period) (res int64, mon time.Month) {
 // resample Bars
 func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 	if newPeriod < b.period {
-		err = invalidPeriod
+		err = errInvalidPeriod
 		return
 	}
 	var vOpen, vHigh, vLow, vClose, volume float64

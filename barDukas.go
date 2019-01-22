@@ -68,9 +68,9 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 	return
 }
 
-// load DukasCopy forex tick data
-//		startD, endD		0 unlimit, or weekbase of date
-//		maxCnt				0 unlimit
+// LoadTickFX ...	load DukasCopy forex tick data
+//				startD, endD		0 unlimit, or weekbase of date
+//				maxCnt				0 unlimit
 func LoadTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []TickFX, err error) {
 	if startD == 0 {
 		if tiC, ok := initTicks[pair]; ok {
@@ -121,29 +121,30 @@ var errBufLen = errors.New("buf length dismatch sizeof minDT")
 
 func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 	fileN := getMinPath(pair, startD)
-	if fd, errL := os.Open(fileN); errL != nil {
+	fd, errL := os.Open(fileN)
+	if errL != nil {
 		err = errL
 		return
-	} else {
-		defer fd.Close()
-		buf, errL := ioutil.ReadAll(fd)
-		if errL != nil {
-			err = errL
-			return
+	}
+
+	defer fd.Close()
+	buf, errL := ioutil.ReadAll(fd)
+	if errL != nil {
+		err = errL
+		return
+	}
+	cnt := len(buf) / 36
+	if cnt > 0 {
+		res = make([]minDT, cnt)
+		j := 0
+		for i := 0; i < cnt && j < len(buf); i++ {
+			dst := (*(*[36]byte)(unsafe.Pointer(&res[i])))[:36]
+			copy(dst, buf[j:j+36])
+			j += 36
 		}
-		cnt := len(buf) / 36
-		if cnt > 0 {
-			res = make([]minDT, cnt)
-			j := 0
-			for i := 0; i < cnt && j < len(buf); i++ {
-				dst := (*(*[36]byte)(unsafe.Pointer(&res[i])))[:36]
-				copy(dst, buf[j:j+36])
-				j += 36
-			}
-			if j != len(buf) {
-				err = errBufLen
-				return
-			}
+		if j != len(buf) {
+			err = errBufLen
+			return
 		}
 	}
 	return
@@ -152,11 +153,12 @@ func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 var cacheDukasHits int
 var cacheDukasMiss int
 
+// DukasCacheStatus dump cache usage
 func DukasCacheStatus() string {
 	return fmt.Sprintf("DukasCache Status: Hits %d, Miss: %d", cacheDukasHits, cacheDukasMiss)
 }
 
-// load DukasCopy forex Min1 data
+// LoadMinFX DukasCopy forex Min1 data
 //		startD, endD		0 unlimit, or weekbase of date
 //		maxCnt				0 unlimit
 func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []MinFX, err error) {
@@ -172,12 +174,9 @@ func LoadMinFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res []Mi
 			res = cc.res
 			cacheDukasHits++
 			return
-		} else {
-			cacheDukasMiss++
 		}
-	} else {
-		cacheDukasMiss++
 	}
+	cacheDukasMiss++
 	var cc = cacheMinFXType{startD: startD, endD: endD}
 
 	tCnt := 0

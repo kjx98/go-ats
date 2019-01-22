@@ -197,18 +197,19 @@ func (mt *dayBarTA) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol flo
 
 var errBarPeriod = errors.New("Invalid period for baseBar")
 
+// LoadBarFX .. load forex Bar data
 func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err error) {
 	if period != Min1 {
 		return errBarPeriod
 	}
 	var mBar = minBarFX{}
 	var fKey SymbolKey
-	if si, err := GetSymbolInfo(pair); err != nil {
-		return err
-	} else {
+	if si, err := GetSymbolInfo(pair); err == nil {
 		fKey = SymbolKey(si.fKey)
 		mBar.fMulti = digitMulti(si.PriceDigits)
 		mBar.fDiv = digitDiv(si.PriceDigits)
+	} else {
+		return err
 	}
 	mBar.ta, err = LoadMinFX(pair, startD, endD, 0)
 	if err != nil {
@@ -243,18 +244,19 @@ func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err e
 	return bars.loadBars(pair, period, mBar.startT, mBar.endT)
 }
 
+// LoadDayBar ... load Bar data for symbol
 func LoadDayBar(symbol string, period Period, startD, endD julian.JulianDay) (err error) {
 	if period != Daily {
 		return errBarPeriod
 	}
 	var mBar = dayBarTA{}
 	var fKey SymbolKey
-	if si, err := GetSymbolInfo(symbol); err != nil {
-		return err
-	} else {
+	if si, err := GetSymbolInfo(symbol); err == nil {
 		fKey = SymbolKey(si.fKey)
 		mBar.fMulti = digitMulti(si.PriceDigits)
 		mBar.fDiv = digitDiv(si.PriceDigits)
+	} else {
+		return err
 	}
 	mBar.ta = GetChart(symbol, startD, endD)
 	if len(mBar.ta) == 0 {

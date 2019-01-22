@@ -9,7 +9,7 @@ import (
 	"github.com/kjx98/golib/julian"
 )
 
-// Symbol
+// Symbol ...
 //	symbol table for assets
 //	StartDate, EndDate,	AutoCloseDate julianDay
 type Symbol struct {
@@ -34,6 +34,7 @@ func getTickerExchange(ticker string) string {
 	return "SSE"
 }
 
+// FindTicker ... get Symbol of ticker
 func FindTicker(ticker string) *Symbol {
 	if sym, ok := symbolsMap[ticker]; ok {
 		return sym
@@ -45,6 +46,7 @@ func FindTicker(ticker string) *Symbol {
 	return &sym
 }
 
+// IsEquity ... get symbol type
 func IsEquity(code string) int {
 	switch string(code[:4]) {
 	case "sh60":
@@ -69,21 +71,23 @@ func IsEquity(code string) int {
 	return 0
 }
 
+// GetDB ... get DB handle
 func GetDB() *sql.DB {
 	return myDB
 }
 
 var myDB *sql.DB
 
+// OpenDB ... open mysql, return DB handle
 func OpenDB() (*sql.DB, error) {
 	if myDB != nil {
 		return myDB, nil
 	}
-	if db, err := sql.Open("mysql", "/tadb?charset=gbk"); err != nil {
+	db, err := sql.Open("mysql", "/tadb?charset=gbk")
+	if err != nil {
 		return nil, err
-	} else {
-		myDB = db
 	}
+	myDB = db
 	// init symbolsMap
 	rows, err := myDB.Query("select * from symbols")
 	if err == nil {
@@ -109,22 +113,22 @@ func OpenDB() (*sql.DB, error) {
 var cacheDayHits int
 var cacheDayMiss int
 
+// DayDbCacheStatus ... dump mysql Dayta cache status
 func DayDbCacheStatus() string {
 	return fmt.Sprintf("DayTACache Status: Hits %d, Miss: %d", cacheDayHits, cacheDayMiss)
 }
 
+// GetChart ... get []DayTA from mysql or cache
 func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 	if cc, ok := cacheDayTA[sym]; ok {
 		if startD >= cc.startD && endD == cc.endD {
 			res = cc.res
 			cacheDayHits++
 			return
-		} else {
-			cacheDayMiss++
 		}
-	} else {
-		cacheDayMiss++
 	}
+	cacheDayMiss++
+
 	si, err := GetSymbolInfo(sym)
 	if err != nil {
 		fmt.Println("GetSymbolInfo err", err)

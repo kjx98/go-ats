@@ -143,7 +143,7 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 	}
 	// subscribe quotes
 	subs := []QuoteSubT{}
-	for sym, _ := range sc.symStrat {
+	for sym := range sc.symStrat {
 		si, err := GetSymbolInfo(sym)
 		if err != nil {
 			continue
@@ -159,17 +159,17 @@ func (sc *strategyRunner) loadStrategy(fname string) (err error) {
 	return
 }
 
-var noEventChannel = errors.New("No Event Channel")
-var noStrategy = errors.New("No Strategy loaded")
+var errNoEventChannel = errors.New("No Event Channel")
+var errNoStrategy = errors.New("No Strategy loaded")
 var errNoActiveStrategy = errors.New("No active Strategy")
 
-func (sc *strategyRunner) emitEvent(si *SymbolInfo, evId int) {
+func (sc *strategyRunner) emitEvent(si *SymbolInfo, evID int) {
 	for _, strat := range sc.strats {
-		switch Period(evId) {
+		switch Period(evID) {
 		case 0:
 			strat.OnTick(si.Ticker)
 		case Min1, Min5, Hour1, Daily:
-			strat.OnBar(si.Ticker, Period(evId))
+			strat.OnBar(si.Ticker, Period(evID))
 		}
 	}
 }
@@ -178,10 +178,10 @@ var wg sync.WaitGroup
 
 func (sc *strategyRunner) runStrategy() error {
 	if sc.evChan == nil {
-		return noEventChannel
+		return errNoEventChannel
 	}
 	if len(sc.strats) == 0 {
-		return noStrategy
+		return errNoStrategy
 	}
 	sc.contxt.Broker.Start(sc.contxt.Config)
 	wg.Add(1)
@@ -195,13 +195,13 @@ func (sc *strategyRunner) runStrategy() error {
 				if !ok {
 					return
 				}
-				if ev.EventId < 0 {
+				if ev.EventID < 0 {
 					// run out of sample Bars
 					return
 				}
 				// process ev
 				if si, err := GetSymbolInfo(ev.Symbol); err == nil {
-					sc.emitEvent(&si, ev.EventId)
+					sc.emitEvent(&si, ev.EventID)
 				}
 			}
 			runtime.Gosched()
