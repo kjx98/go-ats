@@ -2,7 +2,11 @@ package ats
 
 import (
 	"reflect"
+	"runtime"
+	"sync/atomic"
 	"testing"
+
+	"github.com/kjx98/golib/julian"
 )
 
 func TestLoadRunTick(t *testing.T) {
@@ -49,6 +53,8 @@ func TestLoadRunTick(t *testing.T) {
 	}
 }
 
+var subs = []QuoteSubT{}
+
 func TestValidateTick(t *testing.T) {
 	type args struct {
 		sym string
@@ -74,10 +80,17 @@ func TestValidateTick(t *testing.T) {
 		tests[4].wantErr = true
 		tests[5].wantErr = true
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := ValidateTick(tt.args.sym); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTick() error = %v, wantErr %v", err, tt.wantErr)
+			} else if err == nil {
+				if si, err := GetSymbolInfo(tt.args.sym); err == nil {
+					var subo = QuoteSubT{Symbol: tt.args.sym}
+					subo.QuotesPtr = si.getQuotesPtr()
+					subs = append(subs, subo)
+				}
 			}
 		})
 	}
@@ -96,12 +109,12 @@ func Test_simBroker_SendOrder(t *testing.T) {
 	if b < 0 {
 		evCh := make(chan QuoteEvent)
 		defer close(evCh)
-		bb, err := simTrader.Open(evCh)
-		if err != nil {
+		if bb, err := simTrader.Open(evCh); err == nil {
+			b = bb.(simBroker)
+		} else {
 			t.Error("simBroker Open", err)
 			return
 		}
-		b = bb.(simBroker)
 	}
 
 	tests := []struct {
@@ -139,12 +152,12 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 	if b < 0 {
 		evCh := make(chan QuoteEvent)
 		defer close(evCh)
-		bb, err := simTrader.Open(evCh)
-		if err != nil {
+		if bb, err := simTrader.Open(evCh); err == nil {
+			b = bb.(simBroker)
+		} else {
 			t.Error("simBroker Open", err)
 			return
 		}
-		b = bb.(simBroker)
 	}
 	tests := []struct {
 		name    string
@@ -172,4 +185,49 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 		})
 	}
 	dumpOrderBook("EURUSD")
+}
+
+func Test_simBroker_Start(t *testing.T) {
+	type args struct {
+		c Config
+	}
+	if b < 0 {
+		evCh := make(chan QuoteEvent)
+		defer close(evCh)
+		if bb, err := simTrader.Open(evCh); err == nil {
+			b = bb.(simBroker)
+		} else {
+			t.Error("simBroker Open", err)
+			return
+		}
+	}
+	tests := []struct {
+		name    string
+		b       simBroker
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{"simBroker-Start", b, args{Config{}}, false},
+	}
+	st1 := julian.FromUint32(20050301)
+	en1 := julian.FromUint32(20181231)
+	startTime = timeT64FromTime(st1.UTC())
+	endTime = timeT64FromTime(en1.UTC())
+	if len(subs) > 0 {
+		if err := b.SubscribeQuotes(subs); err != nil {
+			log.Error("Broker SubscribeQuotes", err)
+			return
+		}
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.b.Start(tt.args.c); (err != nil) != tt.wantErr {
+				t.Errorf("simBroker.Start() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+	for atomic.LoadInt32(&simStatus) == VmRunning {
+		runtime.Gosched()
+	}
 }

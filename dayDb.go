@@ -83,11 +83,12 @@ func OpenDB() (*sql.DB, error) {
 	if myDB != nil {
 		return myDB, nil
 	}
-	db, err := sql.Open("mysql", "/tadb?charset=gbk")
-	if err != nil {
+	if db, err := sql.Open("mysql", "/tadb?charset=gbk"); err == nil {
+		myDB = db
+	} else {
 		return nil, err
 	}
-	myDB = db
+
 	// init symbolsMap
 	rows, err := myDB.Query("select * from symbols")
 	if err == nil {

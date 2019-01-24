@@ -17,6 +17,7 @@ type strategyRunner struct {
 	contxt   *Context
 }
 
+// buildParam ...	build params from ini config
 func buildParam(c *ini.IniConfig, stratName string, param []Parameter) []float64 {
 	pLen := len(param)
 	if pLen == 0 {
@@ -39,6 +40,7 @@ func buildParam(c *ini.IniConfig, stratName string, param []Parameter) []float64
 	return res
 }
 
+// setParam ... set params from Config
 func setParam(c Config, stratName string, param []Parameter) []float64 {
 	pLen := len(param)
 	if pLen == 0 {
@@ -46,15 +48,16 @@ func setParam(c Config, stratName string, param []Parameter) []float64 {
 	}
 	res := make([]float64, pLen)
 	for i, pp := range param {
+		pName := stratName + "." + pp.Name
 		switch pp.Value.(type) {
 		case int8, int16, int32, int64:
-			pVal := c.GetInt(pp.Name, int(reflect.ValueOf(pp.Value).Int()))
+			pVal := c.GetInt(pName, int(reflect.ValueOf(pp.Value).Int()))
 			res[i] = float64(pVal)
 		case uint8, uint16, uint32, uint64:
-			pVal := c.GetInt(pp.Name, int(reflect.ValueOf(pp.Value).Uint()))
+			pVal := c.GetInt(pName, int(reflect.ValueOf(pp.Value).Uint()))
 			res[i] = float64(pVal)
 		case float32, float64:
-			pVal := c.GetFloat64(pp.Name, reflect.ValueOf(pp.Value).Float())
+			pVal := c.GetFloat64(pName, reflect.ValueOf(pp.Value).Float())
 			res[i] = pVal
 		}
 	}
@@ -69,7 +72,9 @@ func newStrategyRunner() *strategyRunner {
 	return &res
 }
 
-func (sc *strategyRunner) setStrategyParam(c Config) error {
+// SetStrategyParam ...	set Strategy params using Config
+//				values of config item format StratName.ParamName
+func (sc *strategyRunner) SetStrategyParam(c Config) error {
 	for stName, b := range sc.strats {
 		params := setParam(c, stName, b.ParamSet())
 		sc.contxt.Put("Param", params)

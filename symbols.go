@@ -81,6 +81,10 @@ func (s *SymbolInfo) Multi() float64 {
 	return digitMulti(s.PriceDigits)
 }
 
+func (s *SymbolInfo) Divi() float64 {
+	return digitDiv(s.PriceDigits)
+}
+
 // PriceNormal normal Price for order
 func (s *SymbolInfo) PriceNormal(p float64) float64 {
 	p = math.Floor(p/s.PriceStep) * s.PriceStep
@@ -341,12 +345,12 @@ func GetSymbolInfo(sym string) (SymbolInfo, error) {
 	return SymbolInfo{}, errNoSuchSymbol
 }
 
-func (fkey SymbolKey) SymbolInfo() (SymbolInfo, error) {
+func (fkey SymbolKey) SymbolInfo() (*SymbolInfo, error) {
 	idx := int(fkey)
 	if idx <= 0 || idx > len(symInfoCaches) {
-		return SymbolInfo{}, errNoSuchSymbol
+		return nil, errNoSuchSymbol
 	}
-	return symInfoCaches[idx-1], nil
+	return &symInfoCaches[idx-1], nil
 }
 
 var nInstruments int

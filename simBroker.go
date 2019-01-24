@@ -59,6 +59,10 @@ func (sti *simTick) Len() int {
 	return len(sti.ticks)
 }
 
+func (sti *simTick) Left() int {
+	return len(sti.ticks) - sti.curP
+}
+
 func (sti *simTick) Time() DateTimeMs {
 	curP := sti.curP
 	if curP >= len(sti.ticks) {
@@ -94,6 +98,10 @@ func (sti *simTickFX) Len() int {
 	return len(sti.ticks)
 }
 
+func (sti *simTickFX) Left() int {
+	return len(sti.ticks) - sti.curP
+}
+
 func (sti *simTickFX) Time() DateTimeMs {
 	curP := sti.curP
 	if curP >= len(sti.ticks) {
@@ -127,6 +135,7 @@ func (sti *simTickFX) Next() error {
 
 type simTicker interface {
 	Len() int
+	Left() int
 	Time() DateTimeMs
 	TimeAt(i int) DateTimeMs
 	Next() error
@@ -182,8 +191,10 @@ var simOrders = map[int]*simOrderType{}
 
 var defaultFund = float64(1e6)
 
+// simulate params
 // sim Run start/stop time
 var startTime, endTime timeT64
+var simPeriod Period
 
 // current time DateTimeMs of sim Run VM
 var simCurrent DateTimeMs
@@ -214,7 +225,7 @@ const (
 )
 
 var (
-	errVmStatus     = errors.New("simBroker VM status error")
+	errVMStatus     = errors.New("simBroker VM status error")
 	errTickNonExist = errors.New("Tick Data not exist")
 	errTickOrder    = errors.New("Tick Data order error")
 	errNoOrder      = errors.New("No such order")
@@ -305,62 +316,80 @@ func simLoadSymbols() {
 		} else {
 			defer fd.Close()
 			csvR := csv.NewReader(fd)
+			simPeriod = Daily
 			line, err := csvR.Read()
 			for err == nil {
 				// process a line
-				if line[0] != "" && len(line) > 1 {
-					newSymbolInfo(line[0])
-					if si, err := GetSymbolInfo(line[0]); err == nil {
-						// try load tick, min, day data
-						var st, dt julian.JulianDay
-						var bNeedForge = true
-						if len(line) > 2 {
-							st = julian.FromUint32(uint32(to.Int(line[2])))
-							if len(line) > 3 {
-								dt = julian.FromUint32(uint32(to.Int(line[3])))
+				if len(line) == 0 || line[0] == "" {
+					continue
+				}
+				newSymbolInfo(line[0])
+				if si, err := GetSymbolInfo(line[0]); err == nil {
+					// try load tick, min, day data
+					var st, dt julian.JulianDay
+					var bNeedForge = true
+					if len(line) > 2 {
+						st = julian.FromUint32(uint32(to.Int(line[2])))
+						if len(line) > 3 {
+							dt = julian.FromUint32(uint32(to.Int(line[3])))
+						}
+					}
+					if si.IsForex {
+						if strings.Contains(line[1], "t") {
+							if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
+								// load to sim
+								var tickD = simTickFX{}
+								tickD.ticks = res
+								simTickMap[si.FastKey()] = &tickD
+								bNeedForge = false
+								// no OnTick right now
+								/*
+									if simPeriod > 0 {
+										simPeriod = 0
+									}
+								*/
 							}
 						}
+					} else {
+						if strings.Contains(line[1], "t") {
+							// try load ticks for Non FX
+						}
+					}
+					if strings.Contains(line[1], "m") {
+						// loadMindata
 						if si.IsForex {
-							if strings.Contains(line[1], "t") {
-								if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
-									// load to sim
-									var tickD = simTickFX{}
-									tickD.ticks = res
-									simTickMap[si.FastKey()] = &tickD
-									bNeedForge = false
+							if err := LoadBarFX(line[0], Min1, st, dt); err == nil {
+								if simPeriod > Min1 {
+									simPeriod = Min1
 								}
 							}
 						} else {
-							if strings.Contains(line[1], "t") {
-								// try load ticks for Non FX
-							}
+							// try load Min5
 						}
-						if strings.Contains(line[1], "m") {
-							// loadMindata
-							if si.IsForex {
-								LoadBarFX(line[0], Min1, st, dt)
-							} else {
-								// try load Min5
-							}
+					}
+					if strings.Contains(line[1], "d") {
+						// load daily Bar
+						if si.IsForex {
+							// load FX daily
+						} else {
+							LoadDayBar(line[0], Daily, st, dt)
 						}
-						if strings.Contains(line[1], "d") {
-							// load daily Bar
-							if si.IsForex {
-								// load FX daily
-							} else {
-								LoadDayBar(line[0], Daily, st, dt)
-							}
-						}
-						if bNeedForge {
-							// no tick, forge tick from Min1/Min5 or Daily
-							forgeTicks(&si)
-						}
+					}
+					if bNeedForge {
+						// no tick, forge tick from Min1/Min5 or Daily
+						forgeTicks(&si)
 					}
 				}
 				line, err = csvR.Read()
 			}
 		}
 	})
+	// rebuild simTickRun
+	if len(simTickRun) > 0 {
+		for k := range simTickRun {
+			delete(simTickRun, k)
+		}
+	}
 	simTickRun = map[SymbolKey]simTicker{}
 	for k, v := range simTickMap {
 		simTickRun[k] = v
@@ -518,7 +547,7 @@ func (b simBroker) Start(c Config) error {
 	case VmStart, VmRunning:
 		return nil
 	default:
-		return errVmStatus
+		return errVMStatus
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
@@ -546,17 +575,15 @@ func (b simBroker) Start(c Config) error {
 				break
 			}
 		}
+		si, _ := k.SymbolInfo()
 		if v.Time() < msStart {
-			si, _ := k.SymbolInfo()
 			log.Infof("delete simTickRun for symbol(%s)", si.Ticker)
 			delete(simTickRun, k)
+		} else {
+			log.Infof("symbol(%s) left %d ticks", si.Ticker, v.Left())
 		}
 	}
-	if len(simTickRun) == 0 {
-		log.Info("Empty simTickRun, status to Idle")
-		atomic.StoreInt32(&simStatus, VmIdle)
-		return nil
-	}
+
 	// start Tick feed goroutine
 	simCurrent = startMs
 	// always run tick
@@ -569,7 +596,117 @@ func (b simBroker) Start(c Config) error {
 	*/
 	atomic.StoreInt32(&simStatus, VmRunning)
 	// start go routine process ticks
+	go simDoTickLoop()
 	return nil
+}
+
+func simDoTickLoop() {
+	startT := time.Now()
+	totalTicks := 1
+	var msEnd DateTimeMs
+	if endTime != 0 {
+		msEnd = endTime.DateTimeMs()
+	}
+	nextPeriod, _ := periodBaseTime(simCurrent.Unix(), simPeriod)
+	nextPeriod += int64(simPeriod)
+	if len(simTickRun) == 0 {
+		log.Info("Empty simTickRun, status to Idle")
+	} else {
+		log.Info("simStart:", simCurrent, " --> simEnd:", msEnd)
+		log.Info("number of Subscribed quote:", len(simSymbolsQ))
+	}
+	for len(simTickRun) > 0 && atomic.LoadInt32(&simStatus) == VmRunning {
+		msNext := DateTimeMs(0)
+		for k, v := range simTickRun {
+			var ticker string
+			var si *SymbolInfo
+			if s, err := k.SymbolInfo(); err != nil {
+				delete(simTickRun, k)
+				continue
+			} else {
+				si = s
+				ticker = si.Ticker
+			}
+			if v.Time() == simCurrent {
+				totalTicks++
+				// should update quote & Bars
+				simUpdateQuote(si, v)
+				// shall emit Min1/Min5 event?
+				// process OrderBook
+				// emit a tick
+				//simEmitEvent(QuoteEvent{Symbol: ticker, EventID: 0})
+				// move to next
+				if err := v.Next(); err != nil {
+					log.Infof("delete simTickRun for symbol(%s), %s", ticker, err)
+					delete(simTickRun, k)
+					continue
+				}
+			}
+			if msNext == 0 || v.Time() < msNext {
+				msNext = v.Time()
+			}
+
+		}
+		simCurrent = msNext
+		if simCur := simCurrent.Unix(); simCur >= nextPeriod {
+			nextPeriod, _ = periodBaseTime(simCur, simPeriod)
+			nextPeriod += int64(simPeriod)
+			simEmitEvent(QuoteEvent{EventID: int(simPeriod)})
+		}
+		if msEnd != 0 && msNext > msEnd {
+			break
+		}
+	}
+	// emit run out of tick
+	simEmitEvent(QuoteEvent{EventID: -1})
+	// clean simTickRun for manual stop
+	if len(simTickRun) > 0 {
+		log.Info("MANUAL stop simDoTickLoop")
+		for k := range simTickRun {
+			delete(simTickRun, k)
+		}
+	}
+	atomic.StoreInt32(&simStatus, VmIdle)
+	endT := time.Now()
+	durT := endT.Sub(startT)
+	log.Infof("simDoTickLoop run %d ticks cost %.3f seconds, %.3g TPS",
+		totalTicks, durT.Seconds(), float64(totalTicks)/durT.Seconds())
+}
+
+func simUpdateQuote(si *SymbolInfo, tick simTicker) {
+	if qq, ok := simSymbolsQ[si.FastKey()]; ok {
+		bid, ask, last, vol := tick.TickValue()
+		if si.IsForex {
+			last = bid
+		}
+		fBid := float64(bid) * si.Divi()
+		fAsk := float64(ask) * si.Divi()
+		fLast := float64(last) * si.Divi()
+		qq.Bid, qq.Ask, qq.Last = fBid, fAsk, fLast
+		qq.Volume += int64(vol)
+		if qq.TodayOpen == 0 {
+			qq.TodayOpen = fLast
+		}
+		if qq.TodayHigh < fLast {
+			qq.TodayHigh = fLast
+		}
+		if qq.TodayLow == 0 || qq.TodayLow > fLast {
+			qq.TodayLow = fLast
+		}
+	}
+}
+
+func simEmitEvent(ev QuoteEvent) {
+	if ev.Symbol != "" {
+		// emit one event
+		return
+	}
+	for fk := range simSymbolsQ {
+		if si, err := fk.SymbolInfo(); err == nil {
+			ev.Symbol = si.Ticker
+			// emit event
+		}
+	}
 }
 
 func (b simBroker) Stop() error {
@@ -578,7 +715,7 @@ func (b simBroker) Stop() error {
 		return nil
 	case VmRunning:
 	default:
-		return errVmStatus
+		return errVMStatus
 	}
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
@@ -590,7 +727,7 @@ func (b simBroker) Stop() error {
 
 func (b simBroker) SubscribeQuotes(qq []QuoteSubT) error {
 	if atomic.LoadInt32(&simStatus) != VmIdle {
-		return errVmStatus
+		return errVMStatus
 	}
 	// prepare Bars
 	// maybe Once load?
@@ -629,7 +766,8 @@ func (b simBroker) FreeMargin() float64 {
 	return acct.equity - acct.margin
 }
 
-func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, stopL float64) int {
+func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64,
+	stopL float64) int {
 	simVmLock.Lock()
 	defer simVmLock.Unlock()
 	// tobe fix
@@ -641,7 +779,8 @@ func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64, st
 	var prcI = int32(prc * si.Multi())
 	orderNo++
 	var or = simOrderType{simBroker: b, oid: orderNo, price: prcI,
-		OrderType: OrderType{Symbol: sym, Price: prc, StopPrice: stopL, Dir: dir, Qty: qty}}
+		OrderType: OrderType{Symbol: sym, Price: prc, StopPrice: stopL,
+			Dir: dir, Qty: qty}}
 	simOrders[orderNo] = &or
 	// put to orderBook
 	simInsertOrder(&or)
