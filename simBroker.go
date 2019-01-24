@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -299,9 +300,10 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	acctLock.Lock()
 	defer acctLock.Unlock()
 
-	var acct = account{evChan: ch, fundStart: defaultFund, fund: defaultFund,
+	var acct = account{fundStart: defaultFund, fund: defaultFund,
 		equity: defaultFund, balance: defaultFund}
 	nAccounts++
+	//log.Info("dump acct:", ch, nAccounts, acct)
 	//simAccounts is map
 	bb := simBroker(nAccounts)
 
@@ -602,13 +604,16 @@ func (b simBroker) Start(c Config) error {
 
 func simDoTickLoop() {
 	startT := time.Now()
-	totalTicks := 1
+	totalTicks := 0
+	totalDays := 0
 	var msEnd DateTimeMs
 	if endTime != 0 {
 		msEnd = endTime.DateTimeMs()
 	}
 	nextPeriod, _ := periodBaseTime(simCurrent.Unix(), simPeriod)
 	nextPeriod += int64(simPeriod)
+	nextDay, _ := periodBaseTime(simCurrent.Unix(), Daily)
+	nextDay += int64(Daily)
 	if len(simTickRun) == 0 {
 		log.Info("Empty simTickRun, status to Idle")
 	} else {
@@ -651,14 +656,21 @@ func simDoTickLoop() {
 		if simCur := simCurrent.Unix(); simCur >= nextPeriod {
 			nextPeriod, _ = periodBaseTime(simCur, simPeriod)
 			nextPeriod += int64(simPeriod)
-			simEmitEvent(QuoteEvent{EventID: int(simPeriod)})
+			simEmitEvents(QuoteEvent{EventID: int(simPeriod)})
+			if simCur > nextDay {
+				totalDays++
+				simDayRotate()
+				nextDay, _ = periodBaseTime(simCur, Daily)
+				nextDay += int64(Daily)
+				simEmitEvents(QuoteEvent{EventID: int(Daily)})
+			}
 		}
 		if msEnd != 0 && msNext > msEnd {
 			break
 		}
 	}
 	// emit run out of tick
-	simEmitEvent(QuoteEvent{EventID: -1})
+	simEmitEvents(QuoteEvent{EventID: -1})
 	// clean simTickRun for manual stop
 	if len(simTickRun) > 0 {
 		log.Info("MANUAL stop simDoTickLoop")
@@ -668,13 +680,14 @@ func simDoTickLoop() {
 	}
 	atomic.StoreInt32(&simStatus, VmIdle)
 	endT := time.Now()
-	durT := endT.Sub(startT)
-	log.Infof("simDoTickLoop run %d ticks cost %.3f seconds, %.3g TPS",
-		totalTicks, durT.Seconds(), float64(totalTicks)/durT.Seconds())
+	durT := endT.Sub(startT).Seconds()
+	log.Infof("simDoTickLoop run %d ticks %d Days cost %.3f seconds, %.3g TPS",
+		totalTicks, totalDays, durT, float64(totalTicks)/durT)
 }
 
 func simUpdateQuote(si *SymbolInfo, tick simTicker) {
 	if qq, ok := simSymbolsQ[si.FastKey()]; ok {
+		qq.UpdateTime = simCurrent
 		bid, ask, last, vol := tick.TickValue()
 		if si.IsForex {
 			last = bid
@@ -696,15 +709,54 @@ func simUpdateQuote(si *SymbolInfo, tick simTicker) {
 	}
 }
 
-func simEmitEvent(ev QuoteEvent) {
+func simEmitOneEvent(ev QuoteEvent) {
+	sendEvent := func(ch chan<- QuoteEvent) {
+		if ch == nil {
+			return
+		}
+		for {
+			select {
+			case ch <- ev:
+				return
+			default:
+				runtime.Gosched()
+				// inscrease block count
+			}
+		}
+	}
+	for _, bb := range simAccounts {
+		if bb.evChan == nil {
+			continue
+		}
+		sendEvent(bb.evChan)
+	}
+}
+
+func simDayRotate() {
+	for fk, qq := range simSymbolsQ {
+		la := qq.Last
+		*qq = Quotes{}
+		qq.Pclose = la
+		qq.UpdateTime = simCurrent
+		if si, err := fk.SymbolInfo(); err == nil {
+			var ev = QuoteEvent{Symbol: si.Ticker, EventID: int(Daily)}
+			// emit event
+			simEmitOneEvent(ev)
+		}
+	}
+}
+
+func simEmitEvents(ev QuoteEvent) {
 	if ev.Symbol != "" {
 		// emit one event
+		simEmitOneEvent(ev)
 		return
 	}
 	for fk := range simSymbolsQ {
 		if si, err := fk.SymbolInfo(); err == nil {
 			ev.Symbol = si.Ticker
 			// emit event
+			simEmitOneEvent(ev)
 		}
 	}
 }

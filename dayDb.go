@@ -3,9 +3,9 @@ package ats
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-
 	"github.com/kjx98/golib/julian"
 )
 
@@ -83,7 +83,8 @@ func OpenDB() (*sql.DB, error) {
 	if myDB != nil {
 		return myDB, nil
 	}
-	if db, err := sql.Open("mysql", "/tadb?charset=gbk"); err == nil {
+	host := os.Getenv("DBHOST")
+	if db, err := sql.Open("mysql", host+"/tadb?charset=gbk"); err == nil {
 		myDB = db
 	} else {
 		return nil, err
