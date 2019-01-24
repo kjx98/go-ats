@@ -107,9 +107,7 @@ func Test_simBroker_SendOrder(t *testing.T) {
 		stopL float64
 	}
 	if b < 0 {
-		evCh := make(chan QuoteEvent)
-		defer close(evCh)
-		if bb, err := simTrader.Open(evCh); err == nil {
+		if bb, err := simTrader.Open(nil); err == nil {
 			b = bb.(simBroker)
 		} else {
 			t.Error("simBroker Open", err)
@@ -150,9 +148,7 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 		oid int
 	}
 	if b < 0 {
-		evCh := make(chan QuoteEvent)
-		defer close(evCh)
-		if bb, err := simTrader.Open(evCh); err == nil {
+		if bb, err := simTrader.Open(nil); err == nil {
 			b = bb.(simBroker)
 		} else {
 			t.Error("simBroker Open", err)
@@ -192,9 +188,7 @@ func Test_simBroker_Start(t *testing.T) {
 		c Config
 	}
 	if b < 0 {
-		evCh := make(chan QuoteEvent)
-		defer close(evCh)
-		if bb, err := simTrader.Open(evCh); err == nil {
+		if bb, err := simTrader.Open(nil); err == nil {
 			b = bb.(simBroker)
 		} else {
 			t.Error("simBroker Open", err)

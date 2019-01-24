@@ -33,7 +33,6 @@ func Test_OpenBroker(t *testing.T) {
 		name string
 		ch   chan<- QuoteEvent
 	}
-	ch := make(chan QuoteEvent)
 	siBroker := simBroker(1)
 	tests := []struct {
 		name    string
@@ -42,8 +41,8 @@ func Test_OpenBroker(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"openBroker1", args{"simBroker", ch}, siBroker, false},
-		{"openBroker2", args{"simBroker2", ch}, nil, true},
+		{"openBroker1", args{"simBroker", nil}, siBroker, false},
+		{"openBroker2", args{"simBroker2", nil}, nil, true},
 	}
 
 	for _, tt := range tests {
