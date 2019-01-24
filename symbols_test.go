@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+func round(v float64) float64 {
+	return math.Round(v*1e6) / 1e6
+}
+
 func TestInitSymbols(t *testing.T) {
 	initSymbols()
 	t.Log("initTemp:")
@@ -120,6 +124,40 @@ func TestSymbolInfo_CalcRiskVolume(t *testing.T) {
 			}
 			if got := s.CalcRiskVolume(tt.args.amt, tt.args.riskPrice); got != tt.want {
 				t.Errorf("SymbolInfo.CalcRiskVolume() for %s = %v, want %v", tt.sym, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSymbolInfo_CalcProfit(t *testing.T) {
+	type args struct {
+		openP  float64
+		closeP float64
+		volume int32
+	}
+	tests := []struct {
+		name string
+		sym  string
+		args args
+		want float64
+	}{
+		// TODO: Add test cases.
+		{"testCalcProfit1", "sh600600", args{12.51, 12.53, 100}, 2.0},
+		{"testCalcProfit2", "sh600600", args{12.51, 12.55, -200}, -8.0},
+		{"testCalcProfit3", "cu1903", args{53000, 54000, 2}, 10000.0},
+		{"testCalcProfit4", "ESZ8", args{2700, 2750, 1}, 2500.0},
+		{"testCalcProfit5", "SPY", args{2780, 2800, -200}, -4000.0},
+		{"testCalcProfit6", "EURUSD", args{1.1120, 1.1130, 1}, 100.0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := GetSymbolInfo(tt.sym)
+			if err != nil {
+				t.Errorf("GetSymbolInfo(%s) %v", tt.sym, err)
+				return
+			}
+			if got := s.CalcProfit(tt.args.openP, tt.args.closeP, tt.args.volume); round(got) != round(tt.want) {
+				t.Errorf("SymbolInfo.CalcProfit() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -106,6 +106,21 @@ func (s *SymbolInfo) getQuotesPtr() *Quotes {
 	return &s.quote
 }
 
+// CalcProfit calc order profit according to price and volume position
+//		volume < 0 for short
+func (s *SymbolInfo) CalcProfit(openP, closeP float64, volume int32) float64 {
+	fVol := float64(volume)
+	if s.LotSize > 0 {
+		fVol *= float64(s.LotSize)
+	}
+	if vd := s.VolDigits; vd > 0 {
+		mm := digitMulti(vd)
+		fVol *= mm
+	}
+	res := (closeP - openP) * fVol
+	return res
+}
+
 // CalcVolume calc order quantity according to price and value amount in full margin
 func (s *SymbolInfo) CalcVolume(amt float64, p float64) float64 {
 	if s.LotSize > 0 {

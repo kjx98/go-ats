@@ -294,6 +294,15 @@ func dumpOrderBook(sym string) {
 
 }
 
+func dumpOrderStats() {
+	totalOrders := 0
+	for sym, orB := range simOrderBook {
+		log.Infof("%s Bid orders: %d, Ask orders: %d", sym, orB.bids.Len(), orB.asks.Len())
+		totalOrders += orB.bids.Len() + orB.asks.Len()
+	}
+	log.Infof("Total unfilled orders: %d", totalOrders)
+}
+
 type simBroker int
 
 func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
@@ -303,7 +312,7 @@ func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	var acct = account{fundStart: defaultFund, fund: defaultFund,
 		equity: defaultFund, balance: defaultFund}
 	nAccounts++
-	log.Info("dump acct:", ch, acct)
+	//log.Info("dump acct:", ch, nAccounts, acct)
 	//simAccounts is map
 	bb := simBroker(nAccounts)
 
@@ -604,7 +613,8 @@ func (b simBroker) Start(c Config) error {
 
 func simDoTickLoop() {
 	startT := time.Now()
-	totalTicks := 1
+	totalTicks := 0
+	totalDays := 0
 	var msEnd DateTimeMs
 	if endTime != 0 {
 		msEnd = endTime.DateTimeMs()
@@ -637,6 +647,7 @@ func simDoTickLoop() {
 				simUpdateQuote(si, v)
 				// shall emit Min1/Min5 event?
 				// process OrderBook
+				simMatchOrder(si, v)
 				// emit a tick
 				//simEmitEvent(QuoteEvent{Symbol: ticker, EventID: 0})
 				// move to next
@@ -657,6 +668,7 @@ func simDoTickLoop() {
 			nextPeriod += int64(simPeriod)
 			simEmitEvents(QuoteEvent{EventID: int(simPeriod)})
 			if simCur > nextDay {
+				totalDays++
 				simDayRotate()
 				nextDay, _ = periodBaseTime(simCur, Daily)
 				nextDay += int64(Daily)
@@ -678,9 +690,9 @@ func simDoTickLoop() {
 	}
 	atomic.StoreInt32(&simStatus, VmIdle)
 	endT := time.Now()
-	durT := endT.Sub(startT)
-	log.Infof("simDoTickLoop run %d ticks cost %.3f seconds, %.3g TPS",
-		totalTicks, durT.Seconds(), float64(totalTicks)/durT.Seconds())
+	durT := endT.Sub(startT).Seconds()
+	log.Infof("simDoTickLoop run %d ticks %d Days cost %.3f seconds, %.3g TPS",
+		totalTicks, totalDays, durT, float64(totalTicks)/durT)
 }
 
 func simUpdateQuote(si *SymbolInfo, tick simTicker) {
@@ -704,6 +716,98 @@ func simUpdateQuote(si *SymbolInfo, tick simTicker) {
 		if qq.TodayLow == 0 || qq.TodayLow > fLast {
 			qq.TodayLow = fLast
 		}
+	}
+}
+
+func simUpdateAcctPos(si *SymbolInfo, or *simOrderType, last, vol int32) {
+	if vol <= 0 {
+		return
+	}
+	acct := simAccounts[or.simBroker]
+	acct.trades++
+	if pos, ok := acct.pos[si.FastKey()]; ok {
+		fLast := float64(last) * si.Divi()
+		switch or.Dir.Sign() {
+		case 1: // for buy
+			if pos.Positions >= 0 {
+				// increase position
+				avg := pos.AvgPrice*float64(pos.Positions) + fLast*float64(vol)
+				pos.Positions += int(vol)
+				pos.AvgPrice = avg / float64(pos.Positions)
+			} else {
+				// close offset
+				profit := si.CalcProfit(pos.AvgPrice, fLast, -vol)
+				pos.Positions += int(vol)
+				acct.fund += profit
+				acct.balance += profit
+				if profit >= 0 {
+					acct.profit += profit
+					acct.winTrades++
+				} else {
+					acct.loss += profit
+					acct.lossTrades++
+				}
+			}
+		case -1: // for sell
+			if pos.Positions <= 0 {
+				// increase position
+				avg := pos.AvgPrice*float64(-pos.Positions) + fLast*float64(vol)
+				pos.Positions -= int(vol)
+				pos.AvgPrice = avg / float64(-pos.Positions)
+			} else {
+				// close offset
+				profit := si.CalcProfit(pos.AvgPrice, fLast, vol)
+				pos.Positions -= int(vol)
+				acct.fund += profit
+				acct.balance += profit
+				if profit >= 0 {
+					acct.profit += profit
+					acct.winTrades++
+				} else {
+					acct.loss += profit
+					acct.lossTrades++
+				}
+			}
+		default:
+			// should be error
+		}
+	}
+}
+
+func simMatchOrder(si *SymbolInfo, tick simTicker) {
+	if orB, ok := simOrderBook[si.Ticker]; ok {
+		bid, ask, last, vol := tick.TickValue()
+		if si.IsForex {
+			last = ask
+		}
+		iter := orB.bids.Iterator(avl.Forward)
+		for node := iter.First(); node != nil; node = iter.Next() {
+			v := node.Value.(*simOrderType)
+			if v.price >= last {
+				// match
+				v.OrderType.QtyFilled = v.OrderType.Qty
+				v.OrderType.Status = OrderFilled
+				log.Infof("Filled No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+					v.OrderType.Dir, v.Price, v.Qty)
+				orB.bids.Remove(node)
+			}
+		}
+		if si.IsForex {
+			last = bid
+		}
+		iter = orB.asks.Iterator(avl.Forward)
+		for node := iter.First(); node != nil; node = iter.Next() {
+			v := node.Value.(*simOrderType)
+			if v.price <= last {
+				// match
+				v.OrderType.QtyFilled = v.OrderType.Qty
+				v.OrderType.Status = OrderFilled
+				log.Infof("Filled No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
+					v.OrderType.Dir, v.Price, v.Qty)
+				orB.asks.Remove(node)
+			}
+		}
+		_ = vol
 	}
 }
 
