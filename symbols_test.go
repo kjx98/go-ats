@@ -107,7 +107,7 @@ func TestSymbolInfo_CalcRiskVolume(t *testing.T) {
 		{"testRiskVol2", "cu1903", args{10000, 12.5}, 160},
 		{"testRiskVol3", "ESZ8", args{10000, 12.52}, 15},
 		{"testRiskVol4", "SPY", args{10000, 12.55}, 796},
-		{"testRiskVol5", "EURUSD", args{10000, 12.8}, 0.78},
+		{"testRiskVol5", "EURUSD", args{10000, 12.8}, 0.01},
 	}
 	initSymbols()
 	newSymbolInfo("sh600600")
@@ -147,7 +147,7 @@ func TestSymbolInfo_CalcProfit(t *testing.T) {
 		{"testCalcProfit3", "cu1903", args{53000, 54000, 2}, 10000.0},
 		{"testCalcProfit4", "ESZ8", args{2700, 2750, 1}, 2500.0},
 		{"testCalcProfit5", "SPY", args{2780, 2800, -200}, -4000.0},
-		{"testCalcProfit6", "EURUSD", args{1.1120, 1.1130, 1}, 100.0},
+		{"testCalcProfit6", "EURUSD", args{1.1120, 1.1130, 1000}, 1000.0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

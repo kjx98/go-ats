@@ -114,7 +114,7 @@ func (s *SymbolInfo) CalcProfit(openP, closeP float64, volume int32) float64 {
 		fVol *= float64(s.LotSize)
 	}
 	if vd := s.VolDigits; vd > 0 {
-		mm := digitMulti(vd)
+		mm := digitDiv(vd)
 		fVol *= mm
 	}
 	res := (closeP - openP) * fVol
