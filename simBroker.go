@@ -280,7 +280,7 @@ func simRemoveOrder(or *simOrderType) {
 	}
 }
 
-func dumpOrderBook(sym string) {
+func dumpSimOrderBook(sym string) {
 	orB, ok := simOrderBook[sym]
 	if !ok {
 		log.Info("no OrderBook for ", sym)
@@ -303,7 +303,7 @@ func dumpOrderBook(sym string) {
 
 }
 
-func dumpOrderStats() {
+func dumpSimOrderStats() {
 	totalOrders := 0
 	for sym, orB := range simOrderBook {
 		log.Infof("%s Bid orders: %d, Ask orders: %d", sym, orB.bids.Len(), orB.asks.Len())
@@ -312,14 +312,33 @@ func dumpOrderStats() {
 	log.Infof("Total unfilled orders: %d", totalOrders)
 }
 
+func dumpSimBroker() {
+	for k, acct := range simAccounts {
+		if len(acct.orders) == 0 {
+			continue
+		}
+		log.Infof("SimBroker(%d) fundStart(%g) end Fund(%g) trades(%d of %d) "+
+			"win/loss(%d/%d) Profit/Loss(%.3f/%.3f)", int(k), acct.fundStart, acct.fund,
+			acct.trades, len(acct.orders), acct.winTrades, acct.lossTrades,
+			acct.profit, acct.loss)
+		for fk, pp := range acct.pos {
+			si, _ := fk.SymbolInfo()
+			log.Infof("simBroker(%d) position(%s) %d avrPrice(%.3f)", int(k), si.Ticker,
+				pp.Positions, pp.AvgPrice)
+		}
+	}
+}
+
 type simBroker int
 
 func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	acctLock.Lock()
 	defer acctLock.Unlock()
 
-	var acct = account{fundStart: defaultFund, fund: defaultFund,
+	var acct = account{fundStart: defaultFund, fund: defaultFund, evChan: ch,
 		equity: defaultFund, balance: defaultFund}
+	acct.orders = []int{}
+	acct.pos = map[SymbolKey]*PositionType{}
 	nAccounts++
 	//log.Info("dump acct:", ch, nAccounts, acct)
 	//simAccounts is map
@@ -739,62 +758,82 @@ func simUpdateQuote(si *SymbolInfo, tick simTicker) {
 	}
 }
 
-func simUpdateAcctPos(si *SymbolInfo, or *simOrderType, last, vol int32) {
+func simUpdateAcctPos(si *SymbolInfo, or *simOrderType, last int32, vol int) (profit float64) {
 	if vol <= 0 {
 		return
 	}
 	acct := simAccounts[or.simBroker]
 	acct.trades++
-	if pos, ok := acct.pos[si.FastKey()]; ok {
-		fLast := float64(last) * si.Divi()
-		switch or.Dir.Sign() {
-		case 1: // for buy
-			if pos.Positions >= 0 {
-				// increase position
-				avg := pos.AvgPrice*float64(pos.Positions) + fLast*float64(vol)
-				pos.Positions += int(vol)
-				pos.AvgPrice = avg / float64(pos.Positions)
-			} else {
-				// close offset
-				profit := si.CalcProfit(pos.AvgPrice, fLast, -vol)
-				pos.Positions += int(vol)
-				acct.fund += profit
-				acct.balance += profit
-				if profit >= 0 {
-					acct.profit += profit
-					acct.winTrades++
-				} else {
-					acct.loss += profit
-					acct.lossTrades++
-				}
-			}
-		case -1: // for sell
-			if pos.Positions <= 0 {
-				// increase position
-				avg := pos.AvgPrice*float64(-pos.Positions) + fLast*float64(vol)
-				pos.Positions -= int(vol)
-				pos.AvgPrice = avg / float64(-pos.Positions)
-			} else {
-				// close offset
-				profit := si.CalcProfit(pos.AvgPrice, fLast, vol)
-				pos.Positions -= int(vol)
-				acct.fund += profit
-				acct.balance += profit
-				if profit >= 0 {
-					acct.profit += profit
-					acct.winTrades++
-				} else {
-					acct.loss += profit
-					acct.lossTrades++
-				}
-			}
-		default:
-			// should be error
-		}
+	var pos *PositionType
+	if po, ok := acct.pos[si.FastKey()]; ok {
+		pos = po
+	} else {
+		pos = &PositionType{fKey: si.FastKey()}
+		acct.pos[si.FastKey()] = pos
 	}
+	fLast := float64(last) * si.Divi()
+	switch or.Dir.Sign() {
+	case 1: // for buy
+		if pos.Positions >= 0 {
+			// increase position
+			avg := pos.AvgPrice*float64(pos.Positions) + fLast*float64(vol)
+			pos.Positions += vol
+			pos.AvgPrice = avg / float64(pos.Positions)
+		} else {
+			// close offset
+			profit = si.CalcProfit(pos.AvgPrice, fLast, -vol)
+			pos.Positions += vol
+			acct.fund += profit
+			acct.balance += profit
+			if profit >= 0 {
+				acct.profit += profit
+				acct.winTrades++
+			} else {
+				acct.loss += profit
+				acct.lossTrades++
+			}
+		}
+	case -1: // for sell
+		if pos.Positions <= 0 {
+			// increase position
+			avg := pos.AvgPrice*float64(-pos.Positions) + fLast*float64(vol)
+			pos.Positions -= vol
+			pos.AvgPrice = avg / float64(-pos.Positions)
+		} else {
+			// close offset
+			profit = si.CalcProfit(pos.AvgPrice, fLast, vol)
+			pos.Positions -= vol
+			acct.fund += profit
+			acct.balance += profit
+			if profit >= 0 {
+				acct.profit += profit
+				acct.winTrades++
+			} else {
+				acct.loss += profit
+				acct.lossTrades++
+			}
+		}
+	default:
+		// should be error
+	}
+	return
 }
 
+var simLogMatchs int
+
 func simMatchOrder(si *SymbolInfo, tick simTicker) {
+	setFill := func(or *simOrderType, last int32, vol int) {
+		or.OrderType.QtyFilled = or.OrderType.Qty
+		vol = or.OrderType.Qty
+		or.OrderType.Status = OrderFilled
+		or.DoneTime = simCurrent
+		pl := simUpdateAcctPos(si, or, last, vol)
+		simLogMatchs++
+		if simLogMatchs <= 10 {
+			log.Infof("Filled No:%d %s %d %s %g %d P&L(%.3f) via broker(%d)", or.oid, or.Symbol,
+				or.price, or.Dir, or.Price, or.Qty, pl, int(or.simBroker))
+		}
+	}
 	if orB, ok := simOrderBook[si.Ticker]; ok {
 		bid, ask, last, vol := tick.TickValue()
 		if si.IsForex {
@@ -805,10 +844,7 @@ func simMatchOrder(si *SymbolInfo, tick simTicker) {
 			v := node.Value.(*simOrderType)
 			if v.price >= last {
 				// match
-				v.OrderType.QtyFilled = v.OrderType.Qty
-				v.OrderType.Status = OrderFilled
-				log.Infof("Filled No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
-					v.OrderType.Dir, v.Price, v.Qty)
+				setFill(v, last, int(vol))
 				orB.bids.Remove(node)
 			}
 		}
@@ -820,14 +856,10 @@ func simMatchOrder(si *SymbolInfo, tick simTicker) {
 			v := node.Value.(*simOrderType)
 			if v.price <= last {
 				// match
-				v.OrderType.QtyFilled = v.OrderType.Qty
-				v.OrderType.Status = OrderFilled
-				log.Infof("Filled No:%d %s %d %s %g %d", v.oid, v.Symbol, v.price,
-					v.OrderType.Dir, v.Price, v.Qty)
+				setFill(v, last, int(vol))
 				orB.asks.Remove(node)
 			}
 		}
-		_ = vol
 	}
 }
 
@@ -955,6 +987,7 @@ func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64,
 	var or = simOrderType{simBroker: b, oid: orderNo, price: prcI,
 		OrderType: OrderType{Symbol: sym, Price: prc, StopPrice: stopL,
 			Dir: dir, Qty: qty}}
+	or.AckTime = simCurrent
 	simOrders[orderNo] = &or
 	// put to orderBook
 	simInsertOrder(&or)
@@ -993,6 +1026,7 @@ func (b simBroker) CancelOrder(oid int) error {
 	default:
 		simRemoveOrder(or)
 		or.OrderType.Status = OrderCanceled
+		or.DoneTime = simCurrent
 	}
 	return nil
 }
@@ -1030,6 +1064,7 @@ func (b simBroker) CloseOrder(oId int) {
 		// do nothing
 	default:
 		or.OrderType.Status = OrderCanceled
+		or.DoneTime = simCurrent
 	}
 }
 

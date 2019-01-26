@@ -133,7 +133,7 @@ func TestSymbolInfo_CalcProfit(t *testing.T) {
 	type args struct {
 		openP  float64
 		closeP float64
-		volume int32
+		volume int
 	}
 	tests := []struct {
 		name string

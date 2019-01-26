@@ -1,6 +1,7 @@
 package ats
 
 import (
+	"math/rand"
 	"reflect"
 	"runtime"
 	"sync/atomic"
@@ -22,7 +23,8 @@ func TestLoadRunTick(t *testing.T) {
 		// TODO: Add test cases.
 		//{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
 		{"LoadRunTick-EUR", args{"EURUSD"}, 53803847, false},
-		{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
+		//{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
+		{"LoadRunTick-GBP", args{"GBPUSD"}, 47765457, false},
 		{"LoadRunTick-JPY", args{"USDJPY"}, 2126252, false},
 		{"LoadRunTick-XAU", args{"XAUUSD"}, 2009644, false},
 		{"LoadRunTick-ETF", args{"sh510500"}, 5648, false},
@@ -140,7 +142,7 @@ func Test_simBroker_SendOrder(t *testing.T) {
 			}
 		})
 	}
-	dumpOrderBook("EURUSD")
+	dumpSimOrderBook("EURUSD")
 }
 
 func Test_simBroker_CancelOrder(t *testing.T) {
@@ -180,7 +182,7 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 			}
 		})
 	}
-	dumpOrderBook("EURUSD")
+	dumpSimOrderBook("EURUSD")
 }
 
 func Test_simBroker_Start(t *testing.T) {
@@ -195,6 +197,48 @@ func Test_simBroker_Start(t *testing.T) {
 			return
 		}
 	}
+	var bs = []simBroker{}
+	bs = append(bs, b)
+	if bb, err := simTrader.Open(nil); err == nil {
+		b0 := bb.(simBroker)
+		bs = append(bs, b0)
+	}
+	// prepare 1e6 orders
+	// odd for bs[0], even for bs[1]
+	// price 3100 .. 51000 * 0.00001 + 1.0
+	// EUR 1.031 .. 1.163
+	// GBP 1.19 .. 1.51
+
+	var sym string
+	var pr float64
+	var dir OrderDirT
+	for i := 0; i < 1000000; i++ {
+		br := bs[i&1]
+		pB := rand.Intn(32000)
+		pE := rand.Intn(13200)
+		vol := rand.Intn(100) + 1
+		if pB&1 != 0 {
+			// GBP
+			sym = "GBPUSD"
+			pr = 1.19 + float64(pB)*0.00001
+			if pr <= 1.35 {
+				dir = OrderDirBuy
+			} else {
+				dir = OrderDirSell
+			}
+		} else {
+			// EUR
+			sym = "EURUSD"
+			pr = 1.031 + float64(pE)*0.00001
+			if pr <= 1.097 {
+				dir = OrderDirBuy
+			} else {
+				dir = OrderDirSell
+			}
+		}
+		br.SendOrder(sym, dir, vol, pr, 0)
+	}
+
 	tests := []struct {
 		name    string
 		b       simBroker
@@ -214,6 +258,7 @@ func Test_simBroker_Start(t *testing.T) {
 			return
 		}
 	}
+	dumpSimOrderStats()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.b.Start(tt.args.c); (err != nil) != tt.wantErr {
@@ -224,4 +269,6 @@ func Test_simBroker_Start(t *testing.T) {
 	for atomic.LoadInt32(&simStatus) == VmRunning {
 		runtime.Gosched()
 	}
+	dumpSimOrderStats()
+	dumpSimBroker()
 }

@@ -91,8 +91,8 @@ type OrderType struct {
 	QtyFilled int
 	Magic     int
 	Status    OrderStatusT
-	OpenTime  DateTimeMs
-	CloseTime DateTimeMs
+	AckTime   DateTimeMs
+	DoneTime  DateTimeMs
 	AvgPrice  float64
 }
 
