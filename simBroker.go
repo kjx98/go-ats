@@ -56,6 +56,10 @@ type simTickFX struct {
 	ticks []TickFX
 }
 
+func (sti *simTick) Reset() {
+	sti.curP = 0
+}
+
 func (sti *simTick) Len() int {
 	return len(sti.ticks)
 }
@@ -93,6 +97,10 @@ func (sti *simTick) Next() error {
 		return io.EOF
 	}
 	return nil
+}
+
+func (sti *simTickFX) Reset() {
+	sti.curP = 0
 }
 
 func (sti *simTickFX) Len() int {
@@ -135,6 +143,7 @@ func (sti *simTickFX) Next() error {
 }
 
 type simTicker interface {
+	Reset()
 	Len() int
 	Left() int
 	Time() DateTimeMs
@@ -534,15 +543,26 @@ func ValidateTick(sym string) error {
 		return err
 	} else if v, ok := simTickMap[si.FastKey()]; ok {
 		var oldTi DateTimeMs
+		var min, max int32
+		defer v.Reset()
 		for i := 0; i < v.Len(); i++ {
-
-			if ti := v.TimeAt(i); ti >= oldTi {
+			if ti := v.Time(); ti >= oldTi {
 				oldTi = ti
 			} else {
 				return errTickOrder
 			}
-
+			if si.IsForex {
+				bid, ask, _, _ := v.TickValue()
+				if min == 0 || bid < min {
+					min = bid
+				}
+				if ask > max {
+					max = ask
+				}
+			}
+			v.Next()
 		}
+		log.Infof("%s ticks ok, min: %d, max: %d", si.Ticker, min, max)
 	} else {
 		return errTickNonExist
 	}
@@ -652,7 +672,7 @@ func simDoTickLoop() {
 				//simEmitEvent(QuoteEvent{Symbol: ticker, EventID: 0})
 				// move to next
 				if err := v.Next(); err != nil {
-					log.Infof("delete simTickRun for symbol(%s), %s", ticker, err)
+					log.Infof("delete simTickRun for symbol(%s) EOF", ticker)
 					delete(simTickRun, k)
 					continue
 				}

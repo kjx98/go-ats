@@ -107,7 +107,7 @@ func TestSymbolInfo_CalcRiskVolume(t *testing.T) {
 		{"testRiskVol2", "cu1903", args{10000, 12.5}, 160},
 		{"testRiskVol3", "ESZ8", args{10000, 12.52}, 15},
 		{"testRiskVol4", "SPY", args{10000, 12.55}, 796},
-		{"testRiskVol5", "EURUSD", args{10000, 12.8}, 0.01},
+		{"testRiskVol5", "EURUSD", args{10000, 0.0127}, 7.87},
 	}
 	initSymbols()
 	newSymbolInfo("sh600600")
