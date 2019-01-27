@@ -212,7 +212,7 @@ func Test_simBroker_Start(t *testing.T) {
 	var sym string
 	var pr float64
 	var dir OrderDirT
-	for i := 0; i < 1000000; i++ {
+	for i := 0; i < 1e6; i++ {
 		br := bs[i&1]
 		pB := rand.Intn(32000)
 		pE := rand.Intn(13200)

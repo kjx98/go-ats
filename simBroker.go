@@ -846,6 +846,8 @@ func simMatchOrder(si *SymbolInfo, tick simTicker) {
 				// match
 				setFill(v, last, int(vol))
 				orB.bids.Remove(node)
+			} else {
+				break
 			}
 		}
 		if si.IsForex {
@@ -858,6 +860,8 @@ func simMatchOrder(si *SymbolInfo, tick simTicker) {
 				// match
 				setFill(v, last, int(vol))
 				orB.asks.Remove(node)
+			} else {
+				break
 			}
 		}
 	}
