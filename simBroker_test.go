@@ -212,15 +212,14 @@ func Test_simBroker_Start(t *testing.T) {
 	var sym string
 	var pr float64
 	var dir OrderDirT
-	for i := 0; i < 1e6; i++ {
+	for i := 0; i < 2e6; i++ {
 		br := bs[i&1]
-		pB := rand.Intn(32000)
-		pE := rand.Intn(13200)
-		vol := rand.Intn(100) + 1
+		pB := rand.Intn(48000)
+		vol := rand.Intn(10) + 1
+		pr = 1.03 + float64(pB)*0.00001
 		if pB&1 != 0 {
 			// GBP
 			sym = "GBPUSD"
-			pr = 1.19 + float64(pB)*0.00001
 			if pr <= 1.35 {
 				dir = OrderDirBuy
 			} else {
@@ -229,7 +228,6 @@ func Test_simBroker_Start(t *testing.T) {
 		} else {
 			// EUR
 			sym = "EURUSD"
-			pr = 1.031 + float64(pE)*0.00001
 			if pr <= 1.097 {
 				dir = OrderDirBuy
 			} else {
