@@ -185,6 +185,8 @@ func Test_simBroker_CancelOrder(t *testing.T) {
 	dumpSimOrderBook("EURUSD")
 }
 
+const nBrokers = 64
+
 func Test_simBroker_Start(t *testing.T) {
 	type args struct {
 		c Config
@@ -197,11 +199,13 @@ func Test_simBroker_Start(t *testing.T) {
 			return
 		}
 	}
-	var bs = []simBroker{}
-	bs = append(bs, b)
-	if bb, err := simTrader.Open(nil); err == nil {
-		b0 := bb.(simBroker)
-		bs = append(bs, b0)
+	var bs = [nBrokers]simBroker{}
+	bs[0] = b
+	for i := 1; i < nBrokers; i++ {
+		if bb, err := simTrader.Open(nil); err == nil {
+			b0 := bb.(simBroker)
+			bs[i] = b0
+		}
 	}
 	// prepare 1e6 orders
 	// odd for bs[0], even for bs[1]
@@ -212,8 +216,8 @@ func Test_simBroker_Start(t *testing.T) {
 	var sym string
 	var pr float64
 	var dir OrderDirT
-	for i := 0; i < 2e6; i++ {
-		br := bs[i&1]
+	for i := 0; i < 5e6; i++ {
+		br := bs[i&(nBrokers-1)]
 		pB := rand.Intn(48000)
 		vol := rand.Intn(10) + 1
 		pr = 1.03 + float64(pB)*0.00001
