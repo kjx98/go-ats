@@ -198,6 +198,7 @@ var simAccounts = map[simBroker]*account{}
 var orderLock sync.RWMutex
 var orderNo int
 var simOrders = map[int]*simOrderType{}
+var bSimValidate = true
 
 var defaultFund = float64(1e6)
 
@@ -978,15 +979,18 @@ func (b simBroker) FreeMargin() float64 {
 
 func (b simBroker) SendOrder(sym string, dir OrderDirT, qty int, prc float64,
 	stopL float64) int {
-	simVmLock.Lock()
-	defer simVmLock.Unlock()
-	// tobe fix
-	// verify, put to orderbook
 	si, err := GetSymbolInfo(sym)
 	if err != nil {
 		return -1
 	}
 	var prcI = int32(prc * si.Multi())
+	// tobe fix
+	// verify, put to orderbook
+	if bSimValidate {
+		// validate order margin
+	}
+	simVmLock.Lock()
+	defer simVmLock.Unlock()
 	orderNo++
 	var or = simOrderType{simBroker: b, oid: orderNo, price: prcI,
 		OrderType: OrderType{Symbol: sym, Price: prc, StopPrice: stopL,

@@ -135,6 +135,7 @@ func Test_simBroker_SendOrder(t *testing.T) {
 		t.Log("no tickData")
 		return
 	}
+	bSimValidate = false
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.b.SendOrder(tt.args.sym, tt.args.dir, tt.args.qty, tt.args.prc, tt.args.stopL); got != tt.want {
@@ -199,6 +200,7 @@ func Test_simBroker_Start(t *testing.T) {
 			return
 		}
 	}
+	bSimValidate = false
 	var bs = [nBrokers]simBroker{}
 	bs[0] = b
 	for i := 1; i < nBrokers; i++ {
