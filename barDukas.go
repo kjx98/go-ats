@@ -59,7 +59,7 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 		defer r.Close()
 		if buf, errL := ioutil.ReadAll(r); errL == nil {
 			cnt := len(buf) / int(unsafe.Sizeof(tickDT{}))
-			res = (*(*[1 << 31]tickDT)(unsafe.Pointer(&buf[0])))[1:cnt]
+			res = (*(*[1 << 31]tickDT)(unsafe.Pointer(&buf[0])))[:cnt]
 		} else {
 			err = errL
 			return

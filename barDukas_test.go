@@ -22,7 +22,7 @@ func Test_loadTickFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testEUR1", args{"EURUSD", startT}, 431095, false},
+		{"testEUR1", args{"EURUSD", startT}, 431096, false},
 		{"testEUR2", args{"EURUSD", st1}, 0, true},
 	}
 	if noDukasData {
@@ -108,9 +108,10 @@ func TestLoadTickFX(t *testing.T) {
 		wantErr    bool
 	}{
 		// TODO: Add test cases.
-		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3113157, false},
+		//{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3113157, false},
+		{"testLoadTick1", args{"EURUSD", st1, 0, 3000000}, 3113166, false},
 		//{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1171851, false},
-		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173573, false},
+		{"testLoadTick2", args{"EURUSD", 0, en1, 1000000}, 1173579, false},
 	}
 	// fixed rerun cvtDukas3@t410
 	// first tick 03-05-05 03:00:06.561@t440s, count 1171851

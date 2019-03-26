@@ -22,9 +22,11 @@ func TestLoadRunTick(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		//{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
-		{"LoadRunTick-EUR", args{"EURUSD"}, 53803847, false},
+		//{"LoadRunTick-EUR", args{"EURUSD"}, 53803847, false},
+		{"LoadRunTick-EUR", args{"EURUSD"}, 53803921, false},
 		//{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
-		{"LoadRunTick-GBP", args{"GBPUSD"}, 47765457, false},
+		//{"LoadRunTick-GBP", args{"GBPUSD"}, 47765457, false},
+		{"LoadRunTick-GBP", args{"GBPUSD"}, 47765531, false},
 		{"LoadRunTick-JPY", args{"USDJPY"}, 2126252, false},
 		{"LoadRunTick-XAU", args{"XAUUSD"}, 2009644, false},
 		{"LoadRunTick-ETF", args{"sh510500"}, 5648, false},
