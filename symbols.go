@@ -1,6 +1,7 @@
 package ats
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,8 +14,7 @@ import (
 	"sync"
 
 	"github.com/op/go-logging"
-
-	yaml "gopkg.in/yaml.v2"
+	//yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -32,20 +32,20 @@ const (
 // IsForex	Forex/CFD ... OTC instrument without last/sales
 // CommissionType		0	per Amount, 1 Per Lot, 2 Per Trade
 type symbolBase struct {
-	Market         string  `yaml:"market,omitempty"`
-	VolMin         int     `yaml:"volumeMin"`
-	VolMax         int     `yaml:"volumeMax"`
-	VolStep        int     `yaml:"volumeStep"`
-	PriceStep      float64 `yaml:"priceStep"`
-	PriceDigits    int     `yaml:"digits,omitempty"`
-	VolDigits      int     `yaml:"volumeDigits,omitempty"`
-	LotSize        int     `yaml:"lotSize,omitempty"`
-	Margin         float64 `yaml:"margin,omitempty"`
-	IsForex        bool    `yaml:"forex,omitempty"`
-	DefSpread      int32   `yaml:"defSpread,omitempty"`
-	CurrencySym    string  `yaml:"currency,omitempty"`
-	CommissionType int     `yaml:"commisssionType,omitempty"`
-	CommissionRate float64 `yaml:"commissionRate,omitempty"`
+	Market         string  `json:"market,omitempty"`
+	VolMin         int     `json:"volumeMin"`
+	VolMax         int     `json:"volumeMax"`
+	VolStep        int     `json:"volumeStep"`
+	PriceStep      float64 `json:"priceStep"`
+	PriceDigits    int     `json:"digits,omitempty"`
+	VolDigits      int     `json:"volumeDigits,omitempty"`
+	LotSize        int     `json:"lotSize,omitempty"`
+	Margin         float64 `json:"margin,omitempty"`
+	IsForex        bool    `json:"forex,omitempty"`
+	DefSpread      int32   `json:"defSpread,omitempty"`
+	CurrencySym    string  `json:"currency,omitempty"`
+	CommissionType int     `json:"commisssionType,omitempty"`
+	CommissionRate float64 `json:"commissionRate,omitempty"`
 	bMargin        bool
 }
 
@@ -195,13 +195,13 @@ func (s *SymbolInfo) String() (res string) {
 
 // symbol Template used for autoNew tickers
 type symbolTemplate struct {
-	TickerPrefix string `yaml:"ticker"`
+	TickerPrefix string `json:"ticker"`
 	Name         string
 	Base         symbolBase
-	TickerLen    int  `yaml:"tickerLen,omitempty"`
-	DateLen      int  `yaml:"dateLen,omitempty"`
-	USticker     bool `yaml:"usTicker,omitempty"`
-	Bregexp      bool `yaml:"regexp,omitempty"`
+	TickerLen    int  `json:"tickerLen,omitempty"`
+	DateLen      int  `json:"dateLen,omitempty"`
+	USticker     bool `json:"usTicker,omitempty"`
+	Bregexp      bool `json:"regexp,omitempty"`
 	exp          *regexp.Regexp
 }
 
@@ -209,8 +209,8 @@ type symbolTemplate struct {
 // Daily Data should used whole
 type tickConf struct {
 	symbol    string
-	TickStart uint32 `yaml:"start,omitempty"`
-	TickEnd   uint32 `yaml:"end,omitempty"`
+	TickStart uint32 `json:"start,omitempty"`
+	TickEnd   uint32 `json:"end,omitempty"`
 }
 
 var fDiv = [...]float64{100.0, 10.0, 1.0, 0.1, 0.01, 0.001, 0.0001,
@@ -476,9 +476,9 @@ var symbolTempOnce sync.Once
 
 func initSymbols() {
 	symbolTempOnce.Do(func() {
-		if bb, err := ioutil.ReadFile("symbols.yml"); err == nil {
+		if bb, err := ioutil.ReadFile("symbols.json"); err == nil {
 			var symTemps map[string]symbolTemplate
-			if err := yaml.Unmarshal(bb, &symTemps); err == nil {
+			if err := json.Unmarshal(bb, &symTemps); err == nil {
 				initTemp = []symbolTemplate{}
 				for _, ss := range symTemps {
 					if ss.Bregexp {
@@ -489,7 +489,7 @@ func initSymbols() {
 					initTemp = append(initTemp, ss)
 				}
 			} else {
-				log.Warning("Decode symbols.yml", err)
+				log.Warning("Decode symbols.json", err)
 			}
 		}
 		sort.Sort(initTemp)
@@ -516,9 +516,9 @@ func initSymbols() {
 				}
 			*/
 		}
-		if bb, err := ioutil.ReadFile("ticks.yml"); err == nil {
+		if bb, err := ioutil.ReadFile("ticks.json"); err == nil {
 			var symMap map[string]tickConf
-			if err := yaml.Unmarshal(bb, &symMap); err == nil {
+			if err := json.Unmarshal(bb, &symMap); err == nil {
 				for sym, ss := range symMap {
 					newSymbolInfo(sym)
 					//log.Info("Load Ticker", sym)
@@ -528,7 +528,7 @@ func initSymbols() {
 					}
 				}
 			} else {
-				log.Error("Decode ticks.yml", err)
+				log.Error("Decode ticks.json", err)
 			}
 		}
 	})
