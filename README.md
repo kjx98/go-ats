@@ -18,4 +18,4 @@ The main function of goATS is to providing unified broker&feed service for backt
 
 ### Documentation
 
-Visit the docs on [gopkgdoc] go-ats (http://godoc.org/github.com/kjx98/go-ats)
+Visit the docs on go-ats (http://godoc.org/github.com/kjx98/go-ats)
