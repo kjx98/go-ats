@@ -180,7 +180,7 @@ func GetChart(sym string, startD, endD julian.JulianDay) (res []DayTA) {
 	return
 }
 
-func init() {
+func initDayDB() {
 	if _, err := OpenDB(); err != nil {
 		log.Warning("init dayDb, OpenDB()", err)
 	}

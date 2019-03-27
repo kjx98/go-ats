@@ -6,6 +6,10 @@ import (
 	"github.com/kjx98/golib/julian"
 )
 
+func init() {
+	initDayDB()
+}
+
 func TestGetChart(t *testing.T) {
 	type args struct {
 		sym    string
