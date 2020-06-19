@@ -2,6 +2,7 @@ package ats
 
 import (
 	"testing"
+	//"unsafe"
 
 	"github.com/kjx98/golib/julian"
 )
@@ -21,7 +22,7 @@ func TestLoadBarFX(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"LoadBarFX-EUR", args{"EURUSD", Min1, st1, en1}, false},
+		{"LoadBarFX-EUR", args{"EURUSD", Min1, 0, en1}, false},
 		{"LoadBarFX-GBP", args{"GBPUSD", Min1, st1, en1}, false},
 		{"LoadBarFX-JPY", args{"USDJPY", Min1, st1, en1}, false},
 		{"LoadBarFX-XAU", args{"XAUUSD", Min1, st1, en1}, false},
@@ -32,14 +33,16 @@ func TestLoadBarFX(t *testing.T) {
 		tests[2].wantErr = true
 		tests[3].wantErr = true
 	}
+	//t.Logf("TickFX size: %d\n", unsafe.Sizeof(TickFX{}))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := LoadBarFX(tt.args.pair, tt.args.period, tt.args.startD, tt.args.endD); (err != nil) != tt.wantErr {
 				t.Errorf("LoadBarFX() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if cc, ok := cacheMinFX[tt.args.pair]; ok {
-				t.Logf("%s MinBar start: %d, end: %d, length: %d\n", tt.args.pair,
-					cc.startD.Uint32(), cc.endD.Uint32(), len(cc.res))
+				t.Logf("%s MinBar start: %d, end: %d, length: %d\n",
+					tt.args.pair, cc.startD.Uint32(), cc.endD.Uint32(),
+					len(cc.res))
 				var ccTimeMs DateTimeMs
 				if cnt := len(cc.res); cnt > 0 {
 					t.Log("First Rec:", cc.res[0])

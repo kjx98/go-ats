@@ -1,8 +1,8 @@
-dist: xenial
+dist: bionic
 language: go
 
 go:
-  - "1.11.x"
+  - "1.13.x"
 
 script:
     - go test -v ./...
