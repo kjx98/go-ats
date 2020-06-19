@@ -18,6 +18,21 @@ type tickDT struct {
 	BidVol float32
 }
 
+type tNode struct {
+	baseOff uint32
+	ticks   []TickFX
+	nextD   julian.JulianDay
+}
+
+type tickDB struct {
+	pair    string
+	startD  julian.JulianDay
+	endD    julian.JulianDay
+	cnt     int
+	off     uint32
+	curNode tNode
+}
+
 func getTickPath(pair string, startD julian.JulianDay) string {
 	y, m, d := startD.Date()
 	res := fmt.Sprintf("%s/forex/MinData/%s/%04d/%s-%04d%02d%02d.tic",
