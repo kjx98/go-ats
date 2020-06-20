@@ -22,8 +22,11 @@ func TestLoadRunTick(t *testing.T) {
 	}{
 		// TODO: Add test cases.
 		//{"LoadRunTick-EUR", args{"EURUSD"}, 2127996, false},
-		//{"LoadRunTick-EUR", args{"EURUSD"}, 53803847, false},
-		{"LoadRunTick-EUR", args{"EURUSD"}, 53803921, false},
+		// 20160103--20170601 cnt: 53803921
+		// 20090104--20170601 cnt: 185193213
+		// 20060101--20170601 cnt: 247159424
+		//{"LoadRunTick-EUR", args{"EURUSD"}, 53803921, false},
+		{"LoadRunTick-EUR", args{"EURUSD"}, 247159424, false},
 		//{"LoadRunTick-GBP", args{"GBPUSD"}, 2129280, false},
 		//{"LoadRunTick-GBP", args{"GBPUSD"}, 47765457, false},
 		{"LoadRunTick-GBP", args{"GBPUSD"}, 47765531, false},

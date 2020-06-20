@@ -376,11 +376,9 @@ func simLoadSymbols() {
 					}
 					if si.IsForex {
 						if strings.Contains(line[1], "t") {
-							if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
+							if res, err := OpenTickFX(line[0], st, dt, 0); err == nil {
 								// load to sim
-								var tickD = simTickFX{}
-								tickD.ticks = res
-								simTickMap[si.FastKey()] = &tickD
+								simTickMap[si.FastKey()] = res
 								bNeedForge = false
 								// no OnTick right now
 								/*
@@ -389,6 +387,16 @@ func simLoadSymbols() {
 									}
 								*/
 							}
+							/*
+								if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
+									// load to sim
+									var tickD = simTickFX{}
+									tickD.ticks = res
+									simTickMap[si.FastKey()] = &tickD
+									bNeedForge = false
+									// no OnTick right now
+								}
+							*/
 						}
 					} else {
 						if strings.Contains(line[1], "t") {

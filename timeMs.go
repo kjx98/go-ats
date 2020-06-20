@@ -36,11 +36,11 @@ func (dtMs DateTimeMs) Millisecond() int {
 }
 
 func (t timeT64) DateTimeMs() DateTimeMs {
-	return DateTimeMs(int64(t) * 1000)
+	return DateTimeMs(t.Unix() * 1000)
 }
 
 func (t timeT32) DateTimeMs() DateTimeMs {
-	return DateTimeMs(int64(t) * 1000)
+	return DateTimeMs(t.Unix() * 1000)
 }
 
 // TimeToDateTimeMs ... convert time.Time to DateTimeMs
