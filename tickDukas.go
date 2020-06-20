@@ -67,6 +67,11 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 
 func (sti *tickDB) Reset() {
 	sti.curP = 0
+	if sti.curNode != 0 {
+		sti.curD = sti.startD
+		sti.curNode = 0
+		sti.loadCurNode()
+	}
 }
 
 func (sti *tickDB) Len() int {
@@ -86,9 +91,8 @@ func (sti *tickDB) validateCur() int {
 		panic("Out of tickDB nodes bound")
 	}
 	ccN := sti.curNode
-	ccOff := int(sti.nodes[ccN].baseOff+sti.nodes[ccN].nTicks) - curP
-	ccOff--
-	if ccOff < 0 {
+	ccOff := curP - int(sti.nodes[ccN].baseOff)
+	if ccOff >= int(sti.nodes[ccN].nTicks) {
 		panic("Out of tickDB curNode bound")
 	}
 	return ccOff
@@ -138,10 +142,11 @@ func (sti *tickDB) Next() error {
 	if sti.curP < int(sti.nodes[ccN].baseOff+sti.nodes[ccN].nTicks) {
 		return nil
 	}
+	ccN++
 	if ccN >= len(sti.nodes) {
 		return io.EOF
 	}
-	sti.curNode++
+	sti.curNode = ccN
 	sti.curD += 7
 	return sti.loadCurNode()
 }

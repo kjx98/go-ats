@@ -577,6 +577,8 @@ func ValidateTick(sym string) error {
 			if ti := v.Time(); ti >= oldTi {
 				oldTi = ti
 			} else {
+				log.Errorf("%s ticks mis order @%d, min: %d, max: %d",
+					si.Ticker, i, min, max)
 				return errTickOrder
 			}
 			if si.IsForex {
@@ -588,7 +590,9 @@ func ValidateTick(sym string) error {
 					max = ask
 				}
 			}
-			v.Next()
+			if v.Next() != nil {
+				break
+			}
 		}
 		log.Infof("%s ticks ok, min: %d, max: %d", si.Ticker, min, max)
 	} else {
