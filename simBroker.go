@@ -376,6 +376,7 @@ func simLoadSymbols() {
 					}
 					if si.IsForex {
 						if strings.Contains(line[1], "t") {
+							tSt := time.Now()
 							if res, err := OpenTickFX(line[0], st, dt, 0); err == nil {
 								// load to sim
 								simTickMap[si.FastKey()] = res
@@ -386,6 +387,11 @@ func simLoadSymbols() {
 										simPeriod = 0
 									}
 								*/
+								dur := time.Now().Sub(tSt)
+								log.Infof("Load %s ticks %d cost %.3f "+
+									"seconds %.2f kTPS\n", line[0],
+									res.Len(), dur.Seconds(),
+									float64(res.Len())/dur.Seconds()/1000.0)
 							}
 							/*
 								if res, err := LoadTickFX(line[0], st, dt, 0); err == nil {
