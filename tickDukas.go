@@ -165,6 +165,8 @@ func (sti *tickDB) loadCurNode() error {
 	return nil
 }
 
+var tickDbMap = map[string]tickDB{}
+
 // OpenTickFX		Open DukasCopy forex tick data
 //				startD, endD		0 unlimit, or weekbase of date
 //				maxCnt				0 unlimit
@@ -176,6 +178,12 @@ func OpenTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res *ti
 		}
 	}
 	startD = startD.Weekbase()
+	tDB := tickDbMap[pair]
+	if tDB.pair == pair && tDB.startD <= startD && tDB.endD >= endD {
+		res = &tDB
+		log.Info("OpenTickFX using cache, startD ", startD)
+		return
+	}
 	tCnt := 0
 	tOff := 0
 	var ticks []tickDT
@@ -190,6 +198,9 @@ func OpenTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res *ti
 		if err != nil {
 			if res.cnt > 0 && os.IsNotExist(err) {
 				err = nil
+			}
+			if err == nil {
+				tickDbMap[pair] = *res
 			}
 			return
 		}
@@ -214,6 +225,7 @@ func OpenTickFX(pair string, startD, endD julian.JulianDay, maxCnt int) (res *ti
 		}
 		startD += 7
 	}
+	tickDbMap[pair] = *res
 	return
 }
 
