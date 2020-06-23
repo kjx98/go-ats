@@ -115,17 +115,24 @@ func (sti *tickDB) nodeNum(off int) int {
 	return -1
 }
 
-func (sti *tickDB) TimeAt(i int) DateTimeMs {
+func (sti *tickDB) At(i int) error {
 	if i < 0 || i >= sti.cnt {
-		panic("TimeAt out of bound")
+		return errOutOfBound
 	}
 	// go to offset i
 	if ccN := sti.nodeNum(i); ccN < 0 {
-		return DateTimeMs(0)
+		return errOutOfBound
 	} else if ccN != sti.curNode {
 		sti.curD = julian.JulianDay(7*ccN) + sti.startD
 		sti.curNode = ccN
 		sti.loadCurNode()
+	}
+	return nil
+}
+
+func (sti *tickDB) TimeAt(i int) DateTimeMs {
+	if sti.At(i) != nil {
+		panic("TimeAt out of bound")
 	}
 	curP := sti.validateCur()
 	return sti.tickBuf[curP].Time

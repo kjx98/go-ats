@@ -195,7 +195,10 @@ func (mt *dayBarTA) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol flo
 	return
 }
 
-var errBarPeriod = errors.New("Invalid period for baseBar")
+var (
+	errBarPeriod  = errors.New("Invalid period for baseBar")
+	errOutOfBound = errors.New("Out of Tick Bound")
+)
 
 // LoadBarFX .. load forex Bar data
 func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err error) {
