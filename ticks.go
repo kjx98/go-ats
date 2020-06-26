@@ -114,8 +114,9 @@ func (fxm *cacheMinTAType) BarValue(r int) (ti timeT64, o, h, l, c int32, vol in
 	if r < 0 || r > len(fxm.res) {
 		return
 	}
-	ti, o, h, l, c, vol = timeT64(fxm.res[r].Time.Unix()), fxm.res[r].Open, fxm.res[r].High,
-		fxm.res[r].Low, fxm.res[r].Close, int64(fxm.res[r].Volume)
+	ti, o, h, l, c, vol = fxm.res[r].Time.TimeT64(), fxm.res[r].Open,
+		fxm.res[r].High, fxm.res[r].Low, fxm.res[r].Close,
+		int64(fxm.res[r].Volume)
 	return
 }
 
@@ -127,8 +128,9 @@ func (fxm *cacheDayTAType) BarValue(r int) (ti timeT64, o, h, l, c int32, vol in
 	if r < 0 || r > len(fxm.res) {
 		return
 	}
-	ti, o, h, l, c, vol = timeT64(fxm.res[r].Date.UTC().Unix()), fxm.res[r].Open,
-		fxm.res[r].High, fxm.res[r].Low, fxm.res[r].Close, int64(fxm.res[r].Volume)
+	ti, o, h, l, c, vol = timeT64FromTime(fxm.res[r].Date.UTC()),
+		fxm.res[r].Open, fxm.res[r].High, fxm.res[r].Low,
+		fxm.res[r].Close, int64(fxm.res[r].Volume)
 	return
 }
 
@@ -169,7 +171,7 @@ func (mt *minBarTA) Len() int {
 }
 
 func (mt *minBarTA) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64) {
-	Ti, Op, Hi, Lo, Cl, Vol = timeT64(mt.ta[i].Time), float64(mt.ta[i].Open)*mt.fDiv,
+	Ti, Op, Hi, Lo, Cl, Vol = mt.ta[i].Time.TimeT64(), float64(mt.ta[i].Open)*mt.fDiv,
 		float64(mt.ta[i].High)*mt.fDiv, float64(mt.ta[i].Low)*mt.fDiv,
 		float64(mt.ta[i].Close)*mt.fDiv, float64(mt.ta[i].Volume)
 	return
@@ -189,8 +191,9 @@ func (mt *dayBarTA) Len() int {
 }
 
 func (mt *dayBarTA) BarValue(i int) (Ti timeT64, Op, Hi, Lo, Cl float64, Vol float64) {
-	Ti, Op, Hi, Lo, Cl, Vol = timeT64(mt.ta[i].Date.UTC().Unix()), float64(mt.ta[i].Open)*mt.fDiv,
-		float64(mt.ta[i].High)*mt.fDiv, float64(mt.ta[i].Low)*mt.fDiv,
+	Ti, Op, Hi, Lo, Cl, Vol = timeT64FromTime(mt.ta[i].Date.UTC()),
+		float64(mt.ta[i].Open)*mt.fDiv, float64(mt.ta[i].High)*mt.fDiv,
+		float64(mt.ta[i].Low)*mt.fDiv,
 		float64(mt.ta[i].Close)*mt.fDiv, float64(mt.ta[i].Volume)
 	return
 }
@@ -219,11 +222,10 @@ func LoadBarFX(pair string, period Period, startD, endD julian.JulianDay) (err e
 		return
 	}
 
-	startT := timeT64(startD.UTC().Unix())
+	startT := timeT64FromTime(startD.UTC())
 	// end daily, to nextday minus 1 second
 	endD++
-	endT := timeT64(endD.UTC().Unix())
-	endT--
+	endT := timeT64FromInt64(endD.UTC().Unix() - 1)
 	var bars = Bars{symKey: fKey, period: period, startDt: startT, endDt: endT}
 	cnt := mBar.Len()
 	bars.Date = make([]timeT64, cnt)
@@ -266,11 +268,10 @@ func LoadDayBar(symbol string, period Period, startD, endD julian.JulianDay) (er
 		return
 	}
 
-	startT := timeT64(startD.UTC().Unix())
+	startT := timeT64FromTime(startD.UTC())
 	// end daily, to nextday minus 1 second
 	endD++
-	endT := timeT64(endD.UTC().Unix())
-	endT--
+	endT := timeT64FromInt64(endD.UTC().Unix() - 1)
 	var bars = Bars{symKey: fKey, period: period, startDt: startT, endDt: endT}
 	cnt := mBar.Len()
 	bars.Date = make([]timeT64, cnt)

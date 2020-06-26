@@ -2,6 +2,7 @@ package ats
 
 import (
 	"testing"
+	"time"
 )
 
 func TestTimeT32(t *testing.T) {
@@ -23,4 +24,13 @@ func TestTimeT32(t *testing.T) {
 	}
 	var tt timeT32
 	t.Log("dooms time", tt.Dooms().Format("2006-01-02 15:04:05"))
+}
+
+func TestTimeT64(t *testing.T) {
+	tt := time.Now()
+	ttV := tt.Unix()
+	t64 := timeT64FromTime(tt)
+	if t64.Unix() != ttV {
+		t.Errorf("timeT64.Unix diff, got %v, want %v", t64.Unix(), ttV)
+	}
 }

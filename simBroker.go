@@ -18,6 +18,7 @@ import (
 	"github.com/kjx98/golib/to"
 )
 
+// account info for simulation
 type account struct {
 	fundStart  float64
 	equity     float64
@@ -35,6 +36,8 @@ type account struct {
 	pos    map[SymbolKey]*PositionType
 }
 
+// order struct for simulation
+// price using int32 only
 type simOrderType struct {
 	simBroker
 	oid   int
@@ -51,6 +54,8 @@ type simTick struct {
 	ticks []Tick
 }
 
+// simTickFX only for forged ticks from MinFX
+//	using tickDB for file cached Forex ticks
 type simTickFX struct {
 	curP  int
 	ticks []TickFX
@@ -332,6 +337,7 @@ func dumpSimBroker() {
 
 type simBroker int
 
+// init exec broker for simulation
 func (b simBroker) Open(ch chan<- QuoteEvent) (Broker, error) {
 	acctLock.Lock()
 	defer acctLock.Unlock()
@@ -470,28 +476,28 @@ func forgeTicks(si *SymbolInfo) {
 				hto := r.Int63() % int64(period)
 				lto := r.Int63() % int64(period)
 				if hto > lto {
-					atick.Time = (ti + timeT64(lto)).DateTimeMs()
+					atick.Time = ti.Add(lto).DateTimeMs()
 					atick.Bid = l
 					atick.Ask = l + si.DefSpread
 					atick = &tickD.ticks[j]
 					j++
-					atick.Time = (ti + timeT64(hto)).DateTimeMs()
+					atick.Time = ti.Add(hto).DateTimeMs()
 					atick.Bid = h
 					atick.Ask = h + si.DefSpread
 				} else {
-					atick.Time = (ti + timeT64(hto)).DateTimeMs()
+					atick.Time = ti.Add(hto).DateTimeMs()
 					atick.Bid = h
 					atick.Ask = h + si.DefSpread
 					atick = &tickD.ticks[j]
 					j++
-					atick.Time = (ti + timeT64(lto)).DateTimeMs()
+					atick.Time = ti.Add(lto).DateTimeMs()
 					atick.Bid = l
 					atick.Ask = l + si.DefSpread
 				}
 				// last for close
 				atick = &tickD.ticks[j]
 				j++
-				atick.Time = (ti + timeT64(period)).DateTimeMs() - 1
+				atick.Time = ti.Add(int64(period)).DateTimeMs() - 1
 				atick.Bid = c
 				atick.Ask = c + si.DefSpread
 			}
@@ -505,7 +511,7 @@ func forgeTicks(si *SymbolInfo) {
 				ti, o, h, l, c, vol := cc.BarValue(i)
 				atick = &tickD.ticks[j]
 				j++
-				atick.Time = timeT32(ti)
+				atick.Time = ti.TimeT32()
 				atick.Last = o
 				atick.Volume = uint32(vol * 3 / 8)
 				atick = &tickD.ticks[j]
@@ -513,28 +519,28 @@ func forgeTicks(si *SymbolInfo) {
 				hto := r.Int63() % int64(period)
 				lto := r.Int63() % int64(period)
 				if hto > lto {
-					atick.Time = timeT32(ti + timeT64(lto))
+					atick.Time = ti.Add(lto).TimeT32()
 					atick.Last = l
 					atick.Volume = uint32(vol / 8)
 					atick = &tickD.ticks[j]
 					j++
-					atick.Time = timeT32(ti + timeT64(hto))
+					atick.Time = ti.Add(hto).TimeT32()
 					atick.Last = h
 					atick.Volume = uint32(vol / 8)
 				} else {
-					atick.Time = timeT32(ti + timeT64(hto))
+					atick.Time = ti.Add(hto).TimeT32()
 					atick.Last = h
 					atick.Volume = uint32(vol / 8)
 					atick = &tickD.ticks[j]
 					j++
-					atick.Time = timeT32(ti + timeT64(lto))
+					atick.Time = ti.Add(lto).TimeT32()
 					atick.Last = l
 					atick.Volume = uint32(vol / 8)
 				}
 				// last for close
 				atick = &tickD.ticks[j]
 				j++
-				atick.Time = timeT32(ti+timeT64(period)) - 1
+				atick.Time = ti.Add(int64(period)).TimeT32() - 1
 				atick.Last = c
 				atick.Volume = uint32(vol * 3 / 8)
 			}
@@ -674,7 +680,7 @@ func simDoTickLoop() {
 	totalTicks := 0
 	totalDays := 0
 	var msEnd DateTimeMs
-	if endTime != 0 {
+	if endTime.Unix() != 0 {
 		msEnd = endTime.DateTimeMs()
 	}
 	nextPeriod, _ := periodBaseTime(simCurrent.Unix(), simPeriod)

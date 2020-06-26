@@ -165,6 +165,10 @@ func TestLoadMinFX(t *testing.T) {
 		{"testLoadMin5", args{"USDJPY", st1, en1, 0}, 531563, false},
 		{"testLoadMin6", args{"XAUUSD", st1, en1, 0}, 502411, false},
 	}
+	minFXSize := unsafe.Sizeof(MinFX{})
+	if minFXSize != 36 {
+		t.Errorf("MinFX sizeof is %d not 36", minFXSize)
+	}
 	// fixed, rurun cvtDukas @t410
 	if noDukasData {
 		tests[0].wantResLen = 0

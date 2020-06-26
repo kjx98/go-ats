@@ -50,21 +50,22 @@ func loadMinFX(pair string, startD julian.JulianDay) (res []minDT, err error) {
 	cnt := len(buf) / 36
 	if cnt > 0 {
 		// minDT sizeof 40, multipe of timeT64
+		// revamp timeT64, using [2]uint32, minDT sizeof got 36!!!
+		mdt := (*(*[1 << 30]minDT)(unsafe.Pointer(&buf[0])))[:cnt]
+		res = mdt[:cnt]
 		/*
-			mdt := (*(*[1 << 30]minDT)(unsafe.Pointer(&buf[0])))[:cnt]
-			res = mdt[:cnt]
+			res = make([]minDT, cnt)
+			j := 0
+			for i := 0; i < cnt && j < len(buf); i++ {
+				dst := (*(*[36]byte)(unsafe.Pointer(&res[i])))[:36]
+				copy(dst, buf[j:j+36])
+				j += 36
+			}
+			if j != len(buf) {
+				err = errBufLen
+				return
+			}
 		*/
-		res = make([]minDT, cnt)
-		j := 0
-		for i := 0; i < cnt && j < len(buf); i++ {
-			dst := (*(*[36]byte)(unsafe.Pointer(&res[i])))[:36]
-			copy(dst, buf[j:j+36])
-			j += 36
-		}
-		if j != len(buf) {
-			err = errBufLen
-			return
-		}
 	}
 	return
 }

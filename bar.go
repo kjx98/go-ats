@@ -104,7 +104,8 @@ func (b *Bars) String() string {
 	if err != nil {
 		return fmt.Sprintf("Bars with error symKey: %s", err)
 	}
-	return fmt.Sprintf("%s, period %s, start: %s, end: %s, Total: %d", si.Ticker, b.period.String(),
+	return fmt.Sprintf("%s, period %s, start: %s, end: %s, Total: %d",
+		si.Ticker, b.period.String(),
 		b.startDt.String(), b.endDt.String(), len(b.Date))
 }
 
@@ -119,8 +120,9 @@ func (b *Bars) RowString(idx int) string {
 	}
 	dig := si.Digits()
 	if dig <= 0 {
-		return fmt.Sprintf("%s %d/%d/%d/%d %d", b.Date[idx].String(), int(b.Open[idx]),
-			int(b.High[idx]), int(b.Low[idx]), int(b.Close[idx]), int(b.Volume[idx]))
+		return fmt.Sprintf("%s %d/%d/%d/%d %d", b.Date[idx].String(),
+			int(b.Open[idx]), int(b.High[idx]), int(b.Low[idx]),
+			int(b.Close[idx]), int(b.Volume[idx]))
 	}
 	return fmt.Sprintf("%s %.*f/%.*f/%.*f/%.*f %d", b.Date[idx].String(), dig,
 		b.Open[idx], dig, b.High[idx], dig, b.Low[idx], dig, b.Close[idx],
@@ -163,12 +165,12 @@ func (b *Bars) loadBars(sym string, period Period, startDt, endDt timeT64) error
 	default:
 		return errInvalidPeriod
 	}
-	if startDt == 0 || startDt > b.Date[0] {
+	if startDt.Unix() == 0 || startDt.Unix() > b.Date[0].Unix() {
 		startDt = b.Date[0]
 	}
-	if endDt == 0 {
+	if endDt.Unix() == 0 {
 		cnt := len(b.Date)
-		endDt = timeT64(int64(b.Date[cnt-1]) + int64(b.period))
+		endDt = b.Date[cnt-1].Add(int64(b.period))
 	}
 	b.symKey = SymbolKey(si.fKey)
 	b.period = period
@@ -190,11 +192,11 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 		return b
 	}
 	lastT, _ := periodBaseTime(curTime.Unix(), b.period)
-	if int64(b.Date[cnt-1]) < lastT {
+	if b.Date[cnt-1].Unix() < lastT {
 		return b
 	}
 	for cnt > 0 {
-		if int64(b.Date[cnt-1]) < lastT {
+		if b.Date[cnt-1].Unix() < lastT {
 			break
 		}
 		cnt--
@@ -202,7 +204,7 @@ func (b *Bars) timeBars(curTime DateTimeMs) *Bars {
 	var newBar = Bars{symKey: b.symKey}
 	newBar.period = b.period
 	newBar.startDt = b.startDt
-	newBar.endDt = timeT64(lastT)
+	newBar.endDt = timeT64FromInt64(lastT)
 	j := 0
 	//optimize for backtesting, limit lookback
 	/*
@@ -278,8 +280,8 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		bkey := getBarCacheHash(fKey, period)
 		if cc, ok := cacheBars[bkey]; ok {
 			res = &cc.Bars
-			if res.endDt >= baseBars.endDt {
-				cc.lastAccess = timeT64(time.Now().Unix())
+			if res.endDt.Unix() >= baseBars.endDt.Unix() {
+				cc.lastAccess = timeT64FromTime(time.Now())
 				res = res.timeBars(curTime)
 				return
 			}
@@ -291,7 +293,7 @@ func getBarsByKey(fKey int, period Period, curTime DateTimeMs) (res *Bars, err e
 		}
 		cc := BarCache{}
 		cc.Bars = *res
-		cc.lastAccess = timeT64(time.Now().Unix())
+		cc.lastAccess = timeT64FromTime(time.Now())
 		cc.loadTime = cc.lastAccess
 		cc.basePeriod = basePeriod
 		cacheBars[bkey] = &cc
@@ -321,11 +323,11 @@ func periodBaseTime(t int64, period Period) (res int64, mon time.Month) {
 	*/
 	case Weekly:
 		res = t - (t % int64(Daily))
-		if wday := timeT64(res).Time().Weekday(); wday != 0 {
+		if wday := timeT64FromInt64(res).Time().Weekday(); wday != 0 {
 			res -= int64(Daily) * int64(wday)
 		}
 	case Monthly:
-		y, mon, _ := timeT64(t).Time().Date()
+		y, mon, _ := timeT64FromInt64(t).Time().Date()
 		tt := time.Date(y, mon, 1, 0, 0, 0, 0, time.UTC)
 		res = tt.Unix()
 	}
@@ -352,10 +354,10 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 		res = &Bars{symKey: b.symKey}
 		res.period = newPeriod
 		for i := 0; i < cnt; i++ {
-			if int64(b.Date[i]) >= vDate+int64(newPeriod) {
+			if b.Date[i].Unix() >= vDate+int64(newPeriod) {
 				// new Bar
 				if vDate != 0 {
-					res.Date = append(res.Date, timeT64(vDate))
+					res.Date = append(res.Date, timeT64FromInt64(vDate))
 					res.Open = append(res.Open, vOpen)
 					res.High = append(res.High, vHigh)
 					res.Low = append(res.Low, vLow)
@@ -368,7 +370,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 				volume = 0
 			}
 			if vDate == 0 {
-				vDate, _ = periodBaseTime(int64(b.Date[i]), newPeriod)
+				vDate, _ = periodBaseTime(b.Date[i].Unix(), newPeriod)
 				vOpen = b.Open[i]
 			}
 			if vHigh == 0 || b.High[i] > vHigh {
@@ -381,7 +383,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 			volume += b.Volume[i]
 		}
 		if vDate != 0 {
-			res.Date = append(res.Date, timeT64(vDate))
+			res.Date = append(res.Date, timeT64FromInt64(vDate))
 			res.Open = append(res.Open, vOpen)
 			res.High = append(res.High, vHigh)
 			res.Low = append(res.Low, vLow)
@@ -397,7 +399,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 			if mon != b.Date[i].Time().Month() {
 				// new Bar
 				if vDate != 0 {
-					res.Date = append(res.Date, timeT64(vDate))
+					res.Date = append(res.Date, timeT64FromInt64(vDate))
 					res.Open = append(res.Open, vOpen)
 					res.High = append(res.High, vHigh)
 					res.Low = append(res.Low, vLow)
@@ -410,7 +412,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 				volume = 0
 			}
 			if vDate == 0 {
-				vDate, mon = periodBaseTime(int64(b.Date[i]), newPeriod)
+				vDate, mon = periodBaseTime(b.Date[i].Unix(), newPeriod)
 				vOpen = b.Open[i]
 			}
 			if vHigh == 0 || b.High[i] > vHigh {
@@ -423,7 +425,7 @@ func (b *Bars) reSample(newPeriod Period) (res *Bars, err error) {
 			volume += b.Volume[i]
 		}
 		if vDate != 0 {
-			res.Date = append(res.Date, timeT64(vDate))
+			res.Date = append(res.Date, timeT64FromInt64(vDate))
 			res.Open = append(res.Open, vOpen)
 			res.High = append(res.High, vHigh)
 			res.Low = append(res.Low, vLow)
