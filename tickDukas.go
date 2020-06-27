@@ -9,14 +9,25 @@ import (
 	"unsafe"
 
 	"github.com/kjx98/golib/julian"
+	"github.com/kjx98/golib/to"
 )
 
+// weekly combined forex DukasCopy Tick
 type tickDT struct {
 	Time   DateTimeMs
 	Ask    int32
 	Bid    int32
 	AskVol float32
 	BidVol float32
+}
+
+// raw lzma compressed Dukascopy Tick
+type bi5TickDT struct {
+	DeltaMs uint32
+	Ask     int32
+	Bid     int32
+	AskVol  float32
+	BidVol  float32
 }
 
 type tNode struct {
@@ -41,6 +52,84 @@ func getTickPath(pair string, startD julian.JulianDay) string {
 	res := fmt.Sprintf("%s/forex/MinData/%s/%04d/%s-%04d%02d%02d.tic",
 		homePath, pair, y, pair, y, m, d)
 	return res
+}
+
+func getBi5Path(pair string, day julian.JulianDay, hr int) string {
+	y, m, d := day.Date()
+	res := fmt.Sprintf("%s/forex/DukasTick/%s/%04d/%02d/%02d/%02dh_ticks.bi5",
+		homePath, pair, y, m-1, d, hr)
+	return res
+}
+
+func getCurrencies() (res []string) {
+	path := homePath + "/forex/DukasTick"
+	if ff, err := ioutil.ReadDir(path); err == nil {
+		for _, finfo := range ff {
+			if !finfo.IsDir() {
+				continue
+			}
+			if na := finfo.Name(); na[0] == '.' {
+				log.Info("getCurrencies ignore ", na)
+				continue
+			} else {
+				res = append(res, na)
+			}
+		}
+	}
+	return
+}
+
+func getDirMax(path string) (res string) {
+	if ff, err := ioutil.ReadDir(path); err == nil {
+		for _, finfo := range ff {
+			if na := finfo.Name(); na[0] == '.' {
+				log.Info("getCurrencies ignore ", na)
+				continue
+			} else if na > res {
+				res = na
+			}
+		}
+	}
+	return
+}
+
+func checkLastTick(pair string) (day julian.JulianDay, hr int) {
+	path := homePath + "/forex/DukasTick/" + pair
+	ss := getDirMax(path)
+	y := to.Int(ss)
+	if y < 1900 {
+		return
+	}
+	path += "/" + ss
+	ss = getDirMax(path)
+	m := to.Int(ss)
+	if m < 0 {
+		return
+	}
+	m++
+	path += "/" + ss
+	ss = getDirMax(path)
+	d := to.Int(ss)
+	if d < 0 {
+		return
+	}
+	day = julian.NewJulianDay(y, m, d)
+	path += "/" + ss
+	ss = getDirMax(path)
+	if len(ss) < 12 || ss[2:] != "h_ticks.bi5" {
+		return
+	}
+	hr = to.Int(ss[:2])
+	if hr < 0 {
+		hr = 0
+	} else {
+		hr++
+		if hr > 23 {
+			hr = 0
+			day = day.Add(1)
+		}
+	}
+	return
 }
 
 func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) {

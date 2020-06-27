@@ -6,6 +6,20 @@ import (
 	"github.com/kjx98/golib/julian"
 )
 
+func TestGetCurrencies(t *testing.T) {
+	fx := getCurrencies()
+	if len(fx) == 0 {
+		t.Error("getCurrencies return null slice")
+	}
+	t.Log("Got Currencies: ", fx)
+	fn := getDirMax(homePath + "/forex/DukasTick/EURUSD/2017/09/01")
+	if fn != "23h_ticks.bi5" {
+		t.Error("max should be 23h_ticks.bi5, not", fn)
+	}
+	dd, hh := checkLastTick("EURUSD")
+	t.Log("Last Tick for EURUSD", dd, " hour:", hh)
+}
+
 func TestOpenTickFX(t *testing.T) {
 	type args struct {
 		pair   string
