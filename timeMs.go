@@ -25,6 +25,11 @@ func (dtMs DateTimeMs) Unix() int64 {
 	return int64(dtMs / 1000)
 }
 
+// DateTimeMs Add delta
+func (dtMs DateTimeMs) Add(v int) DateTimeMs {
+	return DateTimeMs(int64(dtMs) + int64(v))
+}
+
 func (dtMs DateTimeMs) String() string {
 	tt := dtMs.Time()
 	return tt.Format("06-01-02 15:04:05.000")

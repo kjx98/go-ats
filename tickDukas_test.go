@@ -20,6 +20,20 @@ func TestGetCurrencies(t *testing.T) {
 	t.Log("Last Tick for EURUSD", dd, " hour:", hh)
 }
 
+func TestLoadBi5Tick(t *testing.T) {
+	st := julian.NewJulianDay(2017, 10, 1)
+	if res, err := loadBi5TickFX("EURUSD", st, 22); err != nil {
+		t.Error("Load bi5 failed", err)
+	} else if len(res) == 0 {
+		t.Error("EURUSD for 2017/10/1 22:00 empty")
+	} else {
+		cnt := len(res)
+		t.Log("bi5 record count:", cnt)
+		t.Log("First tick:", res[0])
+		t.Log("Last tick:", res[cnt-1])
+	}
+}
+
 func TestOpenTickFX(t *testing.T) {
 	type args struct {
 		pair   string

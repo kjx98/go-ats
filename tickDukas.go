@@ -2,12 +2,14 @@ package ats
 
 import (
 	"compress/zlib"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"unsafe"
 
+	"github.com/kjx98/go-ats/lzma"
 	"github.com/kjx98/golib/julian"
 	"github.com/kjx98/golib/to"
 )
@@ -138,6 +140,7 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 		err = errL
 		return
 	} else if r, errL := zlib.NewReader(fd); errL != nil {
+		fd.Close()
 		err = errL
 		return
 	} else {
@@ -149,7 +152,39 @@ func loadTickFX(pair string, startD julian.JulianDay) (res []tickDT, err error) 
 			err = errL
 			return
 		}
+	}
+	return
+}
 
+func rawI2F(v int32) float32 {
+	rr := (*float32)(unsafe.Pointer(&v))
+	return *rr
+}
+
+func loadBi5TickFX(pair string, startD julian.JulianDay, hr int) (res []tickDT, err error) {
+	fileN := getBi5Path(pair, startD, hr)
+	if fd, errL := os.Open(fileN); errL != nil {
+		err = errL
+		return
+	} else {
+		r := lzma.NewReader(fd)
+		defer r.Close()
+		var rv bi5TickDT
+		startMS := JulianToDateTimeMs(startD).Add(hr * 3600 * 1000)
+		for err == nil {
+			err = binary.Read(r, binary.BigEndian, &rv)
+			if err != nil {
+				break
+			}
+			rsV := tickDT{Time: startMS.Add(int(rv.DeltaMs)),
+				Ask: rv.Ask, Bid: rv.Bid,
+				AskVol: rv.AskVol, BidVol: rv.BidVol}
+			res = append(res, rsV)
+		}
+		if err == io.EOF {
+			err = nil
+			return
+		}
 	}
 	return
 }
