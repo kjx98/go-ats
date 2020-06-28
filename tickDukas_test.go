@@ -9,6 +9,10 @@ import (
 func TestGetCurrencies(t *testing.T) {
 	fx := getCurrencies()
 	if len(fx) == 0 {
+		if noDukasData {
+			t.Log("no tickData")
+			return
+		}
 		t.Error("getCurrencies return null slice")
 	}
 	t.Log("Got Currencies: ", fx)
@@ -23,6 +27,10 @@ func TestGetCurrencies(t *testing.T) {
 func TestLoadBi5Tick(t *testing.T) {
 	st := julian.NewJulianDay(2017, 10, 1)
 	if res, err := loadBi5TickFX("EURUSD", st, 22); err != nil {
+		if noDukasData {
+			t.Log("no tickData")
+			return
+		}
 		t.Error("Load bi5 failed", err)
 	} else if len(res) == 0 {
 		t.Error("EURUSD for 2017/10/1 22:00 empty")
@@ -53,6 +61,10 @@ func TestOpenTickFX(t *testing.T) {
 		{"TestOpenTickFX1", args{"EURUSD", 20120101, 20161231, 0}, 137079433, false},
 		{"TestOpenTickFX2", args{"EURUSD", 20090104, 20121231, 0}, 71778793, false},
 		{"TestOpenTickFX2", args{"EURUSD", 20090104, 20170601, 0}, 185193213, false},
+	}
+	if noDukasData {
+		t.Log("no tickData")
+		return
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
