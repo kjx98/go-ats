@@ -307,5 +307,5 @@ var bench = lzmaBenchmark{
 	descr: "text bench with size == -1",
 	level: 3,
 	raw:   readFile("data/data.txt"),
-	lzma:  readFile("data/data.eos.l3.lzma"),
+	//lzma:  readFile("data/data.eos.l3.lzma"),
 }
